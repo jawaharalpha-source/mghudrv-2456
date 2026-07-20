@@ -33,6 +33,7 @@
     --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 10px 32px rgba(0,0,0,.55);
   }
   *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
   html,body{margin:0;padding:0;}
   body{
     background:var(--bg); color:var(--ink);
@@ -365,6 +366,9 @@
     <div class="card" id="archDetails" hidden><div id="archDetailsBody"></div></div>
 
     <div class="live-only">
+      <div class="eyebrow">Bills due soon</div>
+      <div id="dashBills"></div>
+
       <div class="eyebrow">Targets</div>
       <div class="card">
         <div class="tool-grid three">
@@ -375,9 +379,6 @@
         <div id="targetBars"></div>
         <p class="alloc-note" id="goalNote"></p>
       </div>
-
-      <div class="eyebrow">Bills due soon</div>
-      <div id="dashBills"></div>
 
       <div class="eyebrow">Where it goes</div>
       <div class="card"><div id="breakdown"></div></div>
