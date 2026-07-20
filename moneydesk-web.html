@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0E7566">
+<meta name="theme-color" content="#0D7A61">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230D7A61'/%3E%3Ctext x='50' y='68' font-size='55' font-weight='bold' text-anchor='middle' fill='white' font-family='Georgia'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
 <title>MoneyDesk</title>
 <meta name="robots" content="noindex, nofollow">
 <style>
@@ -89,6 +91,8 @@
     background:var(--rule); border:1px solid var(--rule); border-radius:14px; overflow:hidden; margin-bottom:20px;
   }
   .snapshot.two{grid-template-columns:repeat(2,1fr);}
+  .snapshot.four{grid-template-columns:repeat(4,1fr);}
+  @media (max-width:560px){.snapshot.four{grid-template-columns:1fr 1fr;}}
   .stat{background:var(--surface); padding:15px 15px 13px;}
   .stat .l{font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 7px;}
   .stat .v{font-size:1.26rem; font-weight:600; margin:0;}
@@ -314,6 +318,7 @@
 
 <nav class="tabs" role="tablist">
   <button class="tab" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
+  <button class="tab" data-tab="income" role="tab" aria-selected="false">Income</button>
   <button class="tab" data-tab="expenses" role="tab" aria-selected="false">Expenses</button>
   <button class="tab" data-tab="debt" role="tab" aria-selected="false">Debt</button>
   <button class="tab" data-tab="cards" role="tab" aria-selected="false">Cards &amp; Bills</button>
@@ -344,18 +349,17 @@
     </div>
 
     <div class="live-only">
-      <div class="card" style="padding:14px 16px;">
-        <div class="fld">
-          <label for="incomeInput">Monthly take-home</label>
-          <input id="incomeInput" class="num" inputmode="numeric" placeholder="0">
-        </div>
+      <div class="snapshot four">
+        <div class="stat"><p class="l">Income</p><p class="v num" id="dIncome">₹0</p><p class="s" id="dIncomeSub">edit on Income tab</p></div>
+        <div class="stat"><p class="l">Outflow</p><p class="v num" id="dOutflow">₹0</p><p class="s">spend + EMIs</p></div>
+        <div class="stat"><p class="l">Surplus</p><p class="v num" id="dSurplus">₹0</p><p class="s">to save / invest</p></div>
+        <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="dDti">0%</p><p class="s">EMIs ÷ income</p></div>
       </div>
     </div>
-
-    <div class="snapshot">
-      <div class="stat"><p class="l">Outflow</p><p class="v num" id="dOutflow">₹0</p><p class="s">spend + EMIs</p></div>
-      <div class="stat"><p class="l">Surplus</p><p class="v num" id="dSurplus">₹0</p><p class="s">to save / invest</p></div>
-      <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="dDti">0%</p><p class="s">EMIs ÷ take-home</p></div>
+    <div class="snapshot" id="archStats" hidden>
+      <div class="stat"><p class="l">Outflow</p><p class="v num" id="aOutflow">—</p><p class="s">spend + EMIs</p></div>
+      <div class="stat"><p class="l">Surplus</p><p class="v num" id="aSurplus">—</p><p class="s">that month</p></div>
+      <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="aDti">—</p><p class="s">that month</p></div>
     </div>
 
     <div class="card" id="archDetails" hidden><div id="archDetailsBody"></div></div>
@@ -383,6 +387,22 @@
     </div>
 
     <footer>Personal reference tool, not financial advice. All data lives only on this device — use ↓ to back it up. Mutual fund data (Markets tab) is fetched from api.mfapi.in when online.</footer>
+  </section>
+
+  <!-- INCOME -->
+  <section class="view" id="income" role="tabpanel">
+    <h2 class="sec serif">Income sources</h2>
+    <p class="sub">List everything that comes in — salary, bonus, freelance, rent received, interest. Mark each as fixed (arrives every month) or variable. Update variable amounts as months differ; each month's snapshot archives the reality.</p>
+    <div id="incList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addInc">+ Add income source</button></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Fixed / month</span><span></span><span class="bar-amt num" id="fixedTotal">₹0</span></div>
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Variable this month</span><span></span><span class="bar-amt num" id="varTotal">₹0</span></div>
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="font-weight:600;">Total take-home</span><span></span><span class="bar-amt num" id="incTotal" style="font-weight:700; color:var(--accent);">₹0</span></div>
+    </div>
+    <div class="card">
+      <p class="hint" style="margin:0;" id="incAdviceNote"></p>
+    </div>
   </section>
 
   <!-- EXPENSES -->
@@ -621,13 +641,17 @@ function migrate(o){
   o.debts.forEach(d=>{ if(d.dueDay===undefined) d.dueDay=0; });
   o.goals=o.goals||{house:0,emergency:null};
   if(o.goals.invest===undefined) o.goals.invest=0;
+  if(!o.incomes){
+    const inc=Number(o.income)||0;
+    o.incomes = inc>0 ? [{id:uid(),label:"Salary",amount:inc,kind:"fixed"}] : [];
+  }
   return o;
 }
 
 /* ---------- seed ---------- */
 function seed(){
   return {
-    income:0, expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
+    income:0, incomes:[], expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
     history:[], stocks:[], mfWatch:[], checklist:{},
     sip:{amt:0,years:5,rate:12},
     goals:{house:0,emergency:null,invest:0},
@@ -655,13 +679,15 @@ function inrShort(n){
 const numOr0=v=>{ const n=parseFloat(String(v).replace(/[^0-9.-]/g,"")); return isNaN(n)?0:n; };
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
+function totalIncome(){ return state.incomes.reduce((a,i)=>a+numOr0(i.amount),0); }
+function fixedIncome(){ return state.incomes.filter(i=>i.kind==="fixed").reduce((a,i)=>a+numOr0(i.amount),0); }
 function totalEmi(){ return state.debts.reduce((a,d)=>a+numOr0(d.emi),0); }
 function totalExp(){ return state.expenses.reduce((a,e)=>a+numOr0(e.amount),0); }
 function essential(){ return state.expenses.filter(e=>e.kind==="essential").reduce((a,e)=>a+numOr0(e.amount),0)+totalEmi(); }
 function discretionary(){ return state.expenses.filter(e=>e.kind!=="essential").reduce((a,e)=>a+numOr0(e.amount),0); }
 function outflow(){ return totalExp()+totalEmi(); }
-function surplus(){ return numOr0(state.income)-outflow(); }
-function dti(){ const i=numOr0(state.income); return i>0?totalEmi()/i*100:0; }
+function surplus(){ return totalIncome()-outflow(); }
+function dti(){ const i=totalIncome(); return i>0?totalEmi()/i*100:0; }
 function emergencyTarget(){ return state.goals.emergency!=null?numOr0(state.goals.emergency):Math.round(essential()*3); }
 function emergencyHave(){ return state.investments.filter(i=>i.type==="Emergency").reduce((a,i)=>a+numOr0(i.current),0); }
 function netWorth(){
@@ -756,7 +782,7 @@ function captureSnapshot(){
   const mk=monthKey();
   const snap={
     month:mk, value:netWorth(),
-    income:numOr0(state.income), outflow:outflow(), surplus:surplus(), dti:+dti().toFixed(1),
+    income:totalIncome(), fixedInc:fixedIncome(), outflow:outflow(), surplus:surplus(), dti:+dti().toFixed(1),
     invested:state.investments.reduce((a,i)=>a+numOr0(i.invested),0),
     portfolio:state.investments.reduce((a,i)=>a+numOr0(i.current),0),
     emergency:emergencyHave(), emTarget:emergencyTarget(),
@@ -828,11 +854,12 @@ function renderArchived(){
   document.getElementById("heroNW").textContent=v(snap?snap.value:undefined);
   document.getElementById("heroNote").textContent="as archived that month";
   heroDelta(viewing, snap?snap.value:0);
-  document.getElementById("dOutflow").textContent=v(snap&&snap.outflow);
-  const sEl=document.getElementById("dSurplus");
+  document.getElementById("archStats").hidden=false;
+  document.getElementById("aOutflow").textContent=v(snap&&snap.outflow);
+  const sEl=document.getElementById("aSurplus");
   sEl.textContent=v(snap&&snap.surplus);
   sEl.className="v num "+((snap&&snap.surplus<0)?"neg":"pos");
-  document.getElementById("dDti").textContent=snap&&snap.dti!==undefined?snap.dti.toFixed(1)+"%":"—";
+  document.getElementById("aDti").textContent=snap&&snap.dti!==undefined?snap.dti.toFixed(1)+"%":"—";
   const det=document.getElementById("archDetails");
   det.hidden=false;
   document.getElementById("archDetailsBody").innerHTML=`
@@ -943,11 +970,17 @@ function renderOutputs(){
 
   renderDebtStrategy(); renderPayoffSelect(); computePayoff();
   renderCardsSummary(); renderBillsUpcoming();
+  renderIncomeSummary();
   renderInvest(); renderSip(); renderNWHistory(); renderTrends();
   renderReco(); renderAdvice();
 }
 function renderLiveDash(){
   const out=outflow(), sur=surplus(), d=dti();
+  document.getElementById("archStats").hidden=true;
+  const tot=totalIncome();
+  document.getElementById("dIncome").textContent=inr(tot);
+  const nsrc=state.incomes.length;
+  document.getElementById("dIncomeSub").textContent=nsrc?(nsrc+" source"+(nsrc>1?"s":"")+" · edit on Income tab"):"add on Income tab";
   document.getElementById("dOutflow").textContent=inr(out);
   const sEl=document.getElementById("dSurplus"); sEl.textContent=inr(sur);
   sEl.className="v num "+(sur>=0?"pos":"neg");
@@ -1013,11 +1046,16 @@ function buildRecos(){
     out.push({p:"debt",n:n++,t:`Debt quotient is ${dq.toFixed(0)}% — near the ceiling`,
       d:`Lenders get uncomfortable past ~40%. Avoid new EMIs until this falls; clearing the smallest loan fully is the quickest way to buy breathing room.`});
   }
-  const inc0=numOr0(state.income);
+  const inc0=totalIncome();
   if(inc0>0){
     const saveRate=Math.max(surplus(),0)/inc0*100;
     if(saveRate<20 && sur>=0) out.push({p:"save",n:n++,t:`Saving rate is ${saveRate.toFixed(0)}% — push toward 20%`,
       d:`Of ${inr(inc0)} take-home, <b>${inr(Math.max(sur,0))}</b> is left to save. Every ₹1,000 trimmed from discretionary spend (${inr(discretionary())}/mo) moves this up.`});
+  }
+  const fx=fixedIncome(), vr=totalIncome()-fx;
+  if(vr>0&&essential()>fx){
+    out.push({p:"debt",n:n++,t:`Essentials exceed your fixed income`,
+      d:`Commitments of <b>${inr(essential())}/mo</b> rely on variable income (fixed: ${inr(fx)}). One weak month means borrowing. Trim commitments or grow the fixed base until essentials fit inside it.`});
   }
   const retire=state.investments.filter(i=>i.type==="Retirement").reduce((a,i)=>a+numOr0(i.current),0);
   out.push({p:"note",n:n++,t:`Keep retirement on the radar`,
@@ -1201,7 +1239,7 @@ function renderAdvice(){
   const recos=buildRecos();
   const extra=[];
   const d=dti();
-  const inc=numOr0(state.income);
+  const inc=totalIncome();
   if(inc>0){
     const needs=essential()/inc*100, wants=discretionary()/inc*100, save=Math.max(surplus(),0)/inc*100;
     extra.push({p:"note",t:`Your 50/30/20 split today`,
@@ -1365,6 +1403,36 @@ document.getElementById("stockWatch").addEventListener("click",e=>{
 });
 
 /* ---------- editable lists ---------- */
+function renderIncomes(){
+  const wrap=document.getElementById("incList");
+  if(!state.incomes.length){ wrap.innerHTML=`<div class="empty">No income sources yet. Add salary, freelance, rent received, interest…</div>`; return; }
+  wrap.innerHTML=state.incomes.map(i=>`
+    <div class="row exp" data-id="${i.id}">
+      <div class="fld fld-wide"><label>Source</label><input data-f="label" value="${esc(i.label)}" placeholder="e.g. Salary"></div>
+      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${i.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>Type</label><select data-f="kind">
+        <option value="fixed" ${i.kind==="fixed"?"selected":""}>Fixed</option>
+        <option value="variable" ${i.kind!=="fixed"?"selected":""}>Variable</option>
+      </select></div>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+function renderIncomeSummary(){
+  const fx=fixedIncome(), tot=totalIncome(), vr=tot-fx;
+  document.getElementById("fixedTotal").textContent=inr(fx);
+  document.getElementById("varTotal").textContent=inr(vr);
+  document.getElementById("incTotal").textContent=inr(tot);
+  const note=document.getElementById("incAdviceNote");
+  const ess=essential();
+  if(tot===0){ note.textContent="Add your income sources to power the whole app."; return; }
+  if(vr>0&&ess>fx){
+    note.innerHTML=`<b style="color:var(--debt)">Caution:</b> your essential commitments (${inr(ess)}/mo incl. EMIs) exceed your fixed income (${inr(fx)}). A weak month for variable income would force borrowing. Aim to fit essentials within fixed income, and treat variable income as fuel for goals.`;
+  } else if(vr>0){
+    note.innerHTML=`Healthy structure: essentials (${inr(ess)}/mo) fit within your fixed income (${inr(fx)}). Treat variable income (${inr(vr)} this month) as bonus fuel — send it straight to debt payoff or goals rather than absorbing it into lifestyle.`;
+  } else {
+    note.innerHTML=`All income is fixed. If you ever add variable income (bonus, freelance), the golden rule: essentials should fit within fixed income alone.`;
+  }
+}
 function renderExpenses(){
   const wrap=document.getElementById("expList");
   if(!state.expenses.length){ wrap.innerHTML=`<div class="empty">No expenses yet.</div>`; return; }
@@ -1493,6 +1561,7 @@ function refreshRowMeta(container,collection){
 }
 
 /* add buttons */
+document.getElementById("addInc").onclick=()=>{ state.incomes.push({id:uid(),label:"",amount:0,kind:"fixed"}); persist(); renderIncomes(); renderOutputs(); focusLast("incList"); };
 document.getElementById("addExp").onclick=()=>{ state.expenses.push({id:uid(),label:"",amount:0,kind:"essential"}); persist(); renderExpenses(); renderOutputs(); focusLast("expList"); };
 document.getElementById("addDebt").onclick=()=>{ state.debts.push({id:uid(),label:"",emi:0,outstanding:0,rate:0,dueDay:0}); persist(); renderDebts(); renderOutputs(); focusLast("debtList"); };
 document.getElementById("addCard").onclick=()=>{ state.cards.push({id:uid(),name:"",limit:0,balance:0,due:""}); persist(); renderCards(); renderOutputs(); focusLast("cardList"); };
@@ -1501,8 +1570,6 @@ document.getElementById("addInv").onclick=()=>{ state.investments.push({id:uid()
 function focusLast(id){ const rows=document.getElementById(id).querySelectorAll("[data-id]"); const last=rows[rows.length-1]; if(last){ const inp=last.querySelector("input"); if(inp) inp.focus(); } }
 
 /* top inputs */
-const incomeInput=document.getElementById("incomeInput");
-incomeInput.addEventListener("input",()=>{ state.income=numOr0(incomeInput.value); persist(); renderOutputs(); });
 document.getElementById("goalHouse").addEventListener("input",e=>{ state.goals.house=numOr0(e.target.value); persist(); renderOutputs(); });
 document.getElementById("goalEmerg").addEventListener("input",e=>{ state.goals.emergency=e.target.value.trim()===""?null:numOr0(e.target.value); persist(); renderOutputs(); });
 ["sipAmt","sipYears","sipRate"].forEach(id=>{
@@ -1564,18 +1631,18 @@ document.getElementById("importFile").addEventListener("change",e=>{
 /* boot */
 function boot(){
   applyTheme();
-  incomeInput.value=state.income||"";
   document.getElementById("goalHouse").value=state.goals.house||"";
   document.getElementById("goalEmerg").value=state.goals.emergency!=null?state.goals.emergency:"";
   document.getElementById("goalInvest").value=state.goals.invest||"";
   document.getElementById("sipAmt").value=state.sip.amt||"";
   document.getElementById("sipYears").value=state.sip.years||"";
   document.getElementById("sipRate").value=state.sip.rate||"";
-  renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
+  renderIncomes(); renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
   renderStocks(); renderMfWatch();
   renderOutputs();
   persist(); // store the auto-captured snapshot for this month
 }
+bindList("incList","incomes",renderIncomes,["amount"]);
 bindList("expList","expenses",renderExpenses,["amount"]);
 bindList("debtList","debts",renderDebts,["emi","rate","outstanding","dueDay"]);
 bindList("cardList","cards",renderCards,["limit","balance","due"]);
@@ -1583,6 +1650,10 @@ bindList("billList","bills",renderBills,["amount","day"]);
 bindList("invList","investments",renderInvList,["invested","current"]);
 prunePaid();
 boot();
+/* offline support: cache the app on-device after first online open (hosted version only) */
+if("serviceWorker" in navigator && location.protocol==="https:"){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>
