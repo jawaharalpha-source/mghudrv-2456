@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0E7566">
+<title>MoneyDesk</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#F3F5F9; --surface:#FFFFFF; --surface-muted:#EAEEF4;
+    --ink:#101A2E; --ink-muted:#4C5B72; --ink-faint:#8593A8;
+    --accent:#0E8A6D; --accent-soft:#DCF3EB;
+    --gold:#B45309; --gold-soft:#FCEFD9;
+    --plum:#6D5BD0; --plum-soft:#E9E5FA;
+    --debt:#C2455C; --debt-soft:#FADDE3;
+    --warn:#BE3A3A; --rule:#DFE5EE;
+    --hero1:#0D7A61; --hero2:#0E4D40;
+    --shadow:0 1px 3px rgba(16,26,46,.08); --shadow-lg:0 10px 32px rgba(16,26,46,.14);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A111F; --surface:#111A2C; --surface-muted:#182338;
+    --ink:#E9EEF6; --ink-muted:#9FB0C6; --ink-faint:#5C6C84;
+    --accent:#3DDBB0; --accent-soft:#0E3B31;
+    --gold:#F5C066; --gold-soft:#3B2C10;
+    --plum:#A78BFA; --plum-soft:#2A2350;
+    --debt:#F08A93; --debt-soft:#3E1B22;
+    --warn:#F3A0A0; --rule:#22304A;
+    --hero1:#0E5B49; --hero2:#0A3A30;
+    --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 10px 32px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .num{font-family:ui-monospace,"Cascadia Mono","SF Mono",Consolas,monospace;font-variant-numeric:tabular-nums;}
+  .serif{font-family:Georgia,"Iowan Old Style","Palatino Linotype","Book Antiqua",serif;}
+
+  .topbar{
+    position:sticky; top:0; z-index:20;
+    background:color-mix(in srgb, var(--bg) 86%, transparent);
+    backdrop-filter:saturate(160%) blur(10px);
+    border-bottom:1px solid var(--rule);
+    padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .brand{display:flex; align-items:baseline; gap:8px; margin-right:auto;}
+  .brand .mark{font-family:Georgia,serif; font-size:1.15rem; letter-spacing:-.01em;}
+  .brand .mark b{color:var(--gold); font-weight:700;}
+  .brand .tag{font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint);}
+  .iconbtn{
+    appearance:none; border:1px solid var(--rule); background:var(--surface);
+    color:var(--ink-muted); width:34px; height:34px; border-radius:10px;
+    font-size:.9rem; cursor:pointer; display:grid; place-items:center;
+  }
+  .iconbtn:hover{color:var(--ink); border-color:var(--ink-faint);}
+
+  .tabs{
+    position:sticky; top:0; z-index:15;
+    display:flex; gap:2px; overflow-x:auto; scrollbar-width:none;
+    background:var(--bg); border-bottom:1px solid var(--rule); padding:0 10px;
+  }
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{
+    appearance:none; border:none; background:none; cursor:pointer;
+    font-size:.84rem; font-weight:600; color:var(--ink-faint);
+    padding:13px 11px 11px; white-space:nowrap;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .tab[aria-selected="true"]{color:var(--accent); border-bottom-color:var(--gold);}
+
+  .page{max-width:720px; margin:0 auto; padding:22px 16px 120px;}
+  .view{display:none;} .view.active{display:block; animation:rise .35s ease;}
+  @keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+  @media (prefers-reduced-motion:reduce){.view.active{animation:none;}}
+
+  h2.sec{font-family:Georgia,serif; font-weight:400; font-size:1.25rem; margin:0 0 4px;}
+  .sub{color:var(--ink-muted); font-size:.9rem; margin:0 0 18px; max-width:60ch;}
+  .eyebrow{font-size:.68rem; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; margin:26px 0 10px;}
+  .eyebrow:first-child{margin-top:0;}
+
+  .snapshot{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--rule); border:1px solid var(--rule); border-radius:14px; overflow:hidden; margin-bottom:20px;
+  }
+  .snapshot.two{grid-template-columns:repeat(2,1fr);}
+  .stat{background:var(--surface); padding:15px 15px 13px;}
+  .stat .l{font-size:.65rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 7px;}
+  .stat .v{font-size:1.26rem; font-weight:600; margin:0;}
+  .stat .v.pos{color:var(--accent);} .stat .v.neg{color:var(--warn);} .stat .v.gold{color:var(--gold);}
+  .stat .s{font-size:.72rem; color:var(--ink-muted); margin:3px 0 0;}
+  @media (max-width:460px){.snapshot{grid-template-columns:1fr 1fr;} .stat.wide{grid-column:1/-1;}}
+
+  .card{background:var(--surface); border:1px solid var(--rule); border-radius:16px; padding:18px; box-shadow:var(--shadow); margin-bottom:14px;}
+  .card h3{margin:0 0 3px; font-size:.98rem;}
+  .card .hint{font-size:.8rem; color:var(--ink-muted); margin:0 0 14px;}
+  .card .hint:last-child{margin-bottom:0;}
+
+  /* net worth hero */
+  .hero{
+    position:relative; overflow:hidden; border-radius:18px; padding:22px 20px 20px;
+    color:#fff; background:linear-gradient(135deg,var(--hero1),var(--hero2));
+    box-shadow:var(--shadow-lg); margin-bottom:18px;
+  }
+  .hero::after{
+    content:""; position:absolute; top:-70px; right:-70px; width:220px; height:220px;
+    border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.16), transparent 65%);
+  }
+  .hero .l{font-size:.66rem; letter-spacing:.14em; text-transform:uppercase; opacity:.8; margin:0 0 6px;}
+  .hero .v{font-size:2.15rem; font-weight:700; margin:0 0 8px; letter-spacing:-.01em;}
+  .hero-sub{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .hero-note{font-size:.74rem; opacity:.75;}
+  .delta{
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:.76rem; font-weight:700; padding:4px 10px; border-radius:20px;
+    background:rgba(255,255,255,.18); backdrop-filter:blur(4px);
+  }
+  .delta.down{background:rgba(0,0,0,.22);}
+
+  /* month/year filter + archive banner */
+  .filterbar{display:flex; gap:8px; align-items:center; margin-bottom:14px;}
+  .filterbar select{
+    border:1px solid var(--rule); background:var(--surface); color:var(--ink);
+    border-radius:10px; padding:8px 10px; font-size:.84rem; font-weight:600; font-family:inherit;
+  }
+  .filterbar select:focus{outline:2px solid var(--accent); outline-offset:-1px;}
+  .archbanner{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--gold-soft); color:var(--gold); border:1px solid var(--gold);
+    border-radius:12px; padding:10px 14px; font-size:.82rem; font-weight:600; margin-bottom:16px;
+  }
+
+  .gauge{position:relative; height:9px; background:var(--surface-muted); border-radius:5px; margin:16px 0 8px;}
+  .gauge-fill{position:absolute; left:0; top:0; bottom:0; border-radius:5px; transition:width .5s ease;}
+  .gauge-mark{position:absolute; top:-4px; bottom:-4px; width:2px; background:var(--ink-faint);}
+  .gauge-mark span{position:absolute; top:11px; left:50%; transform:translateX(-50%); font-size:.66rem; color:var(--ink-faint); white-space:nowrap;}
+  .figure{font-size:1.9rem; font-weight:700;}
+
+  .bar-row{display:grid; grid-template-columns:118px 1fr 84px; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--rule);}
+  .bar-row:last-child{border-bottom:none;}
+  .bar-label{font-size:.83rem;}
+  .bar-track{background:var(--surface-muted); border-radius:5px; height:9px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:5px; background:var(--accent); transition:width .5s;}
+  .bar-fill.debt{background:var(--debt);} .bar-fill.gold{background:var(--gold);} .bar-fill.plum{background:var(--plum);}
+  .bar-amt{text-align:right; font-size:.82rem; white-space:nowrap;}
+  .bar-amt .pct{color:var(--ink-faint); font-size:.72rem;}
+
+  .row{
+    display:grid; gap:8px; align-items:center;
+    background:var(--surface); border:1px solid var(--rule); border-radius:12px;
+    padding:10px 10px 10px 12px; margin-bottom:8px;
+  }
+  .row.exp{grid-template-columns:1fr 96px 116px 30px;}
+  .row.debt{grid-template-columns:1fr 76px 58px 78px 62px 30px;}
+  .row.ccard{grid-template-columns:1fr 92px 92px 96px 30px;}
+  .row.inv{grid-template-columns:1fr 108px 96px 96px 30px;}
+  .row.bill{grid-template-columns:1fr 88px 68px 104px 30px;}
+  .row.watch{grid-template-columns:1fr 110px 30px;}
+  @media (max-width:560px){
+    .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch{grid-template-columns:1fr 1fr; row-gap:8px;}
+    .row .del{grid-column:2; justify-self:end;}
+    .row .fld-wide{grid-column:1/-1;}
+  }
+  .fld{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .fld label{font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint);}
+  .fld input,.fld select{
+    width:100%; border:1px solid var(--rule); background:var(--bg); color:var(--ink);
+    border-radius:8px; padding:7px 8px; font-size:.85rem; font-family:inherit;
+  }
+  .fld input[inputmode]{font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  .fld input:focus,.fld select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent);}
+  .del{appearance:none; border:none; background:none; color:var(--ink-faint); font-size:1.15rem; cursor:pointer; line-height:1; padding:4px; align-self:end;}
+  .del:hover{color:var(--warn);}
+  .rowmeta{grid-column:1/-1; font-size:.72rem; color:var(--ink-faint); padding-top:2px;}
+  .rowmeta b{color:var(--debt); font-weight:600;}
+  .rowmeta .ok{color:var(--accent); font-weight:600;}
+
+  .btn{
+    appearance:none; cursor:pointer; font-family:inherit; font-size:.84rem; font-weight:600;
+    border-radius:10px; padding:9px 14px; border:1px solid var(--accent);
+    background:var(--accent); color:#fff;
+  }
+  .btn.gold{background:var(--gold); border-color:var(--gold);}
+  .btn.ghost{background:var(--surface); color:var(--accent);}
+  .btn.ghost:hover{background:var(--accent-soft);}
+  .btn.sm{padding:7px 11px; font-size:.8rem;}
+  .btn-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;}
+  .btn:disabled{opacity:.5; cursor:default;}
+
+  .empty{color:var(--ink-faint); font-size:.85rem; text-align:center; padding:22px; border:1px dashed var(--rule); border-radius:12px; margin-bottom:8px;}
+
+  .reco{display:flex; gap:12px; align-items:flex-start; padding:13px 0; border-bottom:1px solid var(--rule);}
+  .reco:last-child{border-bottom:none;}
+  .reco .pin{flex-shrink:0; width:24px; height:24px; border-radius:8px; display:grid; place-items:center; font-size:.72rem; font-weight:700; color:#fff;}
+  .reco.p-debt .pin{background:var(--debt);} .reco.p-save .pin{background:var(--accent);}
+  .reco.p-gold .pin{background:var(--gold);} .reco.p-note .pin{background:var(--ink-faint);}
+  .reco .t{font-size:.88rem; font-weight:600; margin:0 0 2px;}
+  .reco .d{font-size:.82rem; color:var(--ink-muted); margin:0;}
+  .reco .d b{color:var(--ink);}
+
+  .tool-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;}
+  .tool-grid.three{grid-template-columns:1fr 1fr 1fr;}
+  @media (max-width:460px){.tool-grid,.tool-grid.three{grid-template-columns:1fr;}}
+  .result{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule); border:1px solid var(--rule); border-radius:12px; overflow:hidden;}
+  .result.two{grid-template-columns:repeat(2,1fr);}
+  .result .cell{background:var(--surface); padding:13px 12px;}
+  .result .cell .l{font-size:.63rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint); margin:0 0 5px;}
+  .result .cell .v{font-size:1.08rem; font-weight:700; margin:0;}
+  .result .cell .v.save{color:var(--accent);} .result .cell .v.gold{color:var(--gold);}
+  .alloc-note{font-size:.8rem; color:var(--ink-muted); margin:12px 0 0;}
+
+  .pill{display:inline-block; font-size:.65rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:2px 7px; border-radius:20px;}
+  .pill.ok{background:var(--accent-soft); color:var(--accent);}
+  .pill.warn{background:var(--debt-soft); color:var(--debt);}
+  .pill.gold{background:var(--gold-soft); color:var(--gold);}
+
+  /* Bills strip */
+  .duechip{
+    display:flex; align-items:center; gap:10px; background:var(--surface);
+    border:1px solid var(--rule); border-radius:12px; padding:10px 13px; margin-bottom:8px; font-size:.84rem;
+  }
+  .duechip .days{
+    min-width:52px; text-align:center; font-weight:700; font-size:.72rem;
+    border-radius:8px; padding:5px 6px; background:var(--accent-soft); color:var(--accent);
+  }
+  .duechip.soon .days{background:var(--gold-soft); color:var(--gold);}
+  .duechip.urgent .days{background:var(--debt-soft); color:var(--debt);}
+  .duechip .amt{margin-left:auto; font-weight:600;}
+  .duechip .cat{font-size:.68rem; color:var(--ink-faint); display:block;}
+  .duechip.paid{opacity:.55;}
+  .duechip.paid .days{background:var(--surface-muted); color:var(--ink-faint);}
+  .duechip.paid .lbl{text-decoration:line-through;}
+  .paybtn{
+    appearance:none; cursor:pointer; flex-shrink:0;
+    width:28px; height:28px; border-radius:8px;
+    border:1.5px solid var(--rule); background:var(--surface); color:var(--ink-faint);
+    font-size:.8rem; display:grid; place-items:center;
+  }
+  .paybtn:hover{border-color:var(--accent); color:var(--accent);}
+  .duechip.paid .paybtn{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  /* net worth chart */
+  .chart-wrap{width:100%; overflow:hidden;}
+  .chart-wrap svg{display:block; width:100%; height:170px;}
+
+  /* markets */
+  .mf-card{border:1px solid var(--rule); border-radius:12px; padding:13px 14px; margin-bottom:8px; background:var(--surface);}
+  .mf-top{display:flex; align-items:flex-start; gap:8px;}
+  .mf-name{font-size:.85rem; font-weight:600; flex:1; min-width:0;}
+  .mf-nav{font-size:.85rem; font-weight:700; white-space:nowrap;}
+  .mf-rets{display:flex; gap:14px; margin-top:8px; flex-wrap:wrap;}
+  .mf-ret{font-size:.76rem; color:var(--ink-muted);}
+  .mf-ret b{font-size:.86rem; display:block;}
+  .mf-ret b.up{color:var(--accent);} .mf-ret b.down{color:var(--warn);}
+  .searchbox{display:flex; gap:8px; margin-bottom:10px;}
+  .searchbox input{flex:1; border:1px solid var(--rule); background:var(--bg); color:var(--ink); border-radius:10px; padding:9px 11px; font-size:.88rem; font-family:inherit;}
+  .searchbox input:focus{outline:2px solid var(--accent); outline-offset:-1px;}
+  .search-results{margin-bottom:8px;}
+  .sr{
+    display:flex; align-items:center; gap:10px; padding:9px 11px; font-size:.82rem;
+    border:1px solid var(--rule); border-radius:10px; margin-bottom:6px; background:var(--surface); cursor:pointer;
+  }
+  .sr:hover{border-color:var(--accent);}
+  .sr .add{margin-left:auto; color:var(--accent); font-weight:700; font-size:.78rem; white-space:nowrap;}
+  .linkout{
+    display:inline-flex; align-items:center; gap:5px; font-size:.78rem; font-weight:600;
+    color:var(--accent); text-decoration:none; border:1px solid var(--rule); border-radius:20px; padding:5px 12px; margin:0 6px 6px 0;
+    background:var(--surface);
+  }
+  .linkout:hover{border-color:var(--accent); background:var(--accent-soft);}
+  .statusline{font-size:.76rem; color:var(--ink-faint); margin:6px 0 0;}
+
+  /* advice */
+  .adv-check{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--rule); cursor:pointer;}
+  .adv-check:last-child{border-bottom:none;}
+  .adv-box{
+    width:18px; height:18px; border:2px solid var(--ink-faint); border-radius:6px; flex-shrink:0; margin-top:2px;
+    display:grid; place-items:center; font-size:.7rem; color:#fff;
+  }
+  .adv-check.done .adv-box{background:var(--accent); border-color:var(--accent);}
+  .adv-check.done .adv-t{text-decoration:line-through; color:var(--ink-faint);}
+  .adv-t{font-size:.87rem; font-weight:600; margin:0 0 2px;}
+  .adv-d{font-size:.8rem; color:var(--ink-muted); margin:0;}
+
+  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--rule); font-size:.72rem; color:var(--ink-faint);}
+  .toast{
+    position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:var(--bg); font-size:.82rem; padding:9px 16px; border-radius:20px;
+    box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:.25s; z-index:50;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="mark serif">Money<b>Desk</b></span>
+    <span class="tag">personal</span>
+  </div>
+  <button class="iconbtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  <button class="iconbtn" id="exportBtn" title="Back up data to a file" aria-label="Export">↓</button>
+  <button class="iconbtn" id="importBtn" title="Restore data from a file" aria-label="Import">↑</button>
+  <input type="file" id="importFile" accept="application/json" hidden>
+</div>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" data-tab="dashboard" role="tab" aria-selected="true">Dashboard</button>
+  <button class="tab" data-tab="expenses" role="tab" aria-selected="false">Expenses</button>
+  <button class="tab" data-tab="debt" role="tab" aria-selected="false">Debt</button>
+  <button class="tab" data-tab="cards" role="tab" aria-selected="false">Cards &amp; Bills</button>
+  <button class="tab" data-tab="invest" role="tab" aria-selected="false">Invest</button>
+  <button class="tab" data-tab="markets" role="tab" aria-selected="false">Markets</button>
+  <button class="tab" data-tab="advice" role="tab" aria-selected="false">Advice</button>
+</nav>
+
+<div class="page">
+
+  <!-- DASHBOARD -->
+  <section class="view active" id="dashboard" role="tabpanel">
+    <h2 class="sec serif">Snapshot</h2>
+    <p class="sub">Each month archives itself automatically as you edit. Use the filter to revisit any past month's dashboard.</p>
+
+    <div class="filterbar">
+      <select id="viewMonth" aria-label="Month"></select>
+      <select id="viewYear" aria-label="Year"></select>
+      <button class="btn sm" id="backLive" hidden>Back to live</button>
+    </div>
+    <div class="archbanner" id="archBanner" hidden></div>
+
+    <div class="hero">
+      <p class="l" id="heroLabel">Net worth</p>
+      <p class="v num" id="heroNW">₹0</p>
+      <div class="hero-sub"><span class="delta" id="heroDelta" hidden></span><span class="hero-note" id="heroNote">investments − loan balances − card dues</span></div>
+    </div>
+
+    <div class="live-only">
+      <div class="card" style="padding:14px 16px;">
+        <div class="fld">
+          <label for="incomeInput">Monthly take-home</label>
+          <input id="incomeInput" class="num" inputmode="numeric" placeholder="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="snapshot">
+      <div class="stat"><p class="l">Outflow</p><p class="v num" id="dOutflow">₹0</p><p class="s">spend + EMIs</p></div>
+      <div class="stat"><p class="l">Surplus</p><p class="v num" id="dSurplus">₹0</p><p class="s">to save / invest</p></div>
+      <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="dDti">0%</p><p class="s">EMIs ÷ take-home</p></div>
+    </div>
+
+    <div class="card" id="archDetails" hidden><div id="archDetailsBody"></div></div>
+
+    <div class="live-only">
+      <div class="eyebrow">Targets</div>
+      <div class="card">
+        <div class="tool-grid three">
+          <div class="fld"><label for="goalEmerg">Emergency fund target (₹)</label><input id="goalEmerg" class="num" inputmode="numeric" placeholder="auto"></div>
+          <div class="fld"><label for="goalInvest">Investment target (₹)</label><input id="goalInvest" class="num" inputmode="numeric" placeholder="0"></div>
+          <div class="fld"><label for="goalHouse">House downpayment target (₹)</label><input id="goalHouse" class="num" inputmode="numeric" placeholder="0"></div>
+        </div>
+        <div id="targetBars"></div>
+        <p class="alloc-note" id="goalNote"></p>
+      </div>
+
+      <div class="eyebrow">Bills due soon</div>
+      <div id="dashBills"></div>
+
+      <div class="eyebrow">Where it goes</div>
+      <div class="card"><div id="breakdown"></div></div>
+
+      <div class="eyebrow">What to do next</div>
+      <div class="card"><div id="dashReco"></div></div>
+    </div>
+
+    <footer>Personal reference tool, not financial advice. All data lives only on this device — use ↓ to back it up. Mutual fund data (Markets tab) is fetched from api.mfapi.in when online.</footer>
+  </section>
+
+  <!-- EXPENSES -->
+  <section class="view" id="expenses" role="tabpanel">
+    <h2 class="sec serif">Expense tracker</h2>
+    <p class="sub">Your non-loan monthly outflow. The essential tag drives your emergency-fund target and advice.</p>
+    <div id="expList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addExp">+ Add expense</button></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Essential / month</span><span></span><span class="bar-amt num" id="essTotal">₹0</span></div>
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Discretionary / month</span><span></span><span class="bar-amt num" id="discTotal">₹0</span></div>
+    </div>
+  </section>
+
+  <!-- DEBT -->
+  <section class="view" id="debt" role="tabpanel">
+    <h2 class="sec serif">Debt quotient &amp; payoff</h2>
+    <p class="sub">EMIs feed your debt quotient; balance and rate power the payoff planner.</p>
+
+    <div class="card">
+      <div class="figure num" id="dtiFigure" style="color:var(--debt)">0%</div>
+      <span class="hint" id="dtiCaption">of take-home goes to EMIs</span>
+      <div class="gauge">
+        <div class="gauge-fill" id="dtiFill" style="background:var(--debt); width:0%"></div>
+        <div class="gauge-mark" style="left:40%"><span>lender ceiling ~40%</span></div>
+      </div>
+      <p class="hint" id="dtiVerdict" style="margin-top:26px;"></p>
+    </div>
+
+    <div class="eyebrow">Your loans</div>
+    <div id="debtList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addDebt">+ Add loan</button></div>
+
+    <div class="eyebrow">Payoff planner</div>
+    <div class="card">
+      <p class="hint">Pick a loan, try an extra monthly amount on top of its EMI. Reducing-balance math.</p>
+      <div class="tool-grid">
+        <div class="fld"><label for="payoffSel">Loan</label><select id="payoffSel"></select></div>
+        <div class="fld"><label for="extraInput">Extra / month (₹)</label><input id="extraInput" class="num" inputmode="numeric" placeholder="0"></div>
+      </div>
+      <div class="result">
+        <div class="cell"><p class="l">Payoff time</p><p class="v num" id="rTime">—</p></div>
+        <div class="cell"><p class="l">Interest paid</p><p class="v num" id="rInterest">—</p></div>
+        <div class="cell"><p class="l">Interest saved</p><p class="v num save" id="rSaved">—</p></div>
+      </div>
+      <p class="alloc-note" id="payoffNote"></p>
+    </div>
+
+    <div class="eyebrow">Reduce debt — suggested order</div>
+    <div class="card"><div id="debtStrategy"></div></div>
+  </section>
+
+  <!-- CARDS & BILLS -->
+  <section class="view" id="cards" role="tabpanel">
+    <h2 class="sec serif">Credit cards</h2>
+    <p class="sub">Utilization above 30% of a card's limit can drag your credit score — the app flags it.</p>
+    <div id="cardList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addCard">+ Add card</button></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Total owed across cards</span><span></span><span class="bar-amt num" id="cardOwed">₹0</span></div>
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Overall utilization</span><span></span><span class="bar-amt num" id="cardUtil">0%</span></div>
+    </div>
+
+    <div class="eyebrow">Bill reminders</div>
+    <p class="sub">One due calendar from three sources: bills you add here (utilities, insurance, rent…), loan EMIs (set a due day on the Debt tab), and card bills (due day above). Tick ✓ when paid — it resets automatically next cycle.</p>
+    <div id="billList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addBill">+ Add bill</button></div>
+    <div id="billsUpcoming" style="margin-top:16px;"></div>
+  </section>
+
+  <!-- INVEST -->
+  <section class="view" id="invest" role="tabpanel">
+    <h2 class="sec serif">Investments</h2>
+    <p class="sub">Track holdings, project SIPs, and log your net worth each month to watch the line climb.</p>
+
+    <div class="eyebrow">Portfolio</div>
+    <div class="snapshot" style="margin-bottom:14px;">
+      <div class="stat"><p class="l">Invested</p><p class="v num" id="pInvested">₹0</p></div>
+      <div class="stat"><p class="l">Current value</p><p class="v num" id="pCurrent">₹0</p></div>
+      <div class="stat"><p class="l">Gain / loss</p><p class="v num" id="pGain">₹0</p><p class="s" id="pGainPct">—</p></div>
+    </div>
+    <div class="card" id="allocCard" style="display:none;">
+      <h3>Allocation</h3>
+      <div class="hint">Share of current value by type.</div>
+      <div id="allocBars"></div>
+    </div>
+    <div id="invList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addInv">+ Add holding</button></div>
+
+    <div class="eyebrow">SIP projector</div>
+    <div class="card">
+      <p class="hint">What a monthly SIP grows to, and what SIP your house goal needs. Assumes returns compound monthly.</p>
+      <div class="tool-grid three">
+        <div class="fld"><label for="sipAmt">SIP / month (₹)</label><input id="sipAmt" class="num" inputmode="numeric" placeholder="0"></div>
+        <div class="fld"><label for="sipYears">Years</label><input id="sipYears" class="num" inputmode="numeric" placeholder="5"></div>
+        <div class="fld"><label for="sipRate">Expected return % / yr</label><input id="sipRate" class="num" inputmode="decimal" placeholder="12"></div>
+      </div>
+      <div class="result two">
+        <div class="cell"><p class="l">SIP grows to</p><p class="v num gold" id="sipFV">—</p></div>
+        <div class="cell"><p class="l">You put in</p><p class="v num" id="sipIn">—</p></div>
+      </div>
+      <p class="alloc-note" id="sipGoalNote"></p>
+    </div>
+
+    <div class="eyebrow">Net worth history</div>
+    <div class="card">
+      <p class="hint">Snapshots save automatically each month as you edit — no button to remember. Delete any entry below if needed.</p>
+      <div class="chart-wrap" id="nwChart"></div>
+      <div id="nwList"></div>
+    </div>
+  </section>
+
+  <!-- MARKETS -->
+  <section class="view" id="markets" role="tabpanel">
+    <h2 class="sec serif">Markets</h2>
+    <p class="sub">Live mutual fund NAVs and returns, plus your stock watchlist with one-tap live quotes. Needs internet; everything else in the app works offline.</p>
+
+    <div class="eyebrow">Mutual funds — live NAV &amp; returns</div>
+    <div class="card">
+      <p class="hint">Search any Indian mutual fund (data: api.mfapi.in, updated daily after AMCs publish NAV). Returns are computed from actual NAV history — 1y absolute, 3y and 5y annualised.</p>
+      <div class="searchbox">
+        <input id="mfSearch" placeholder="Search e.g. Nifty 50 index, flexi cap…" autocomplete="off">
+        <button class="btn sm" id="mfSearchBtn">Search</button>
+      </div>
+      <div class="search-results" id="mfResults"></div>
+      <div id="mfWatch"></div>
+      <div class="btn-row"><button class="btn ghost sm" id="mfRefresh">↻ Refresh NAVs</button></div>
+      <p class="statusline" id="mfStatus"></p>
+    </div>
+
+    <div class="eyebrow">How to choose a fund</div>
+    <div class="card">
+      <div class="reco p-gold"><span class="pin">1</span><div><p class="t">Match the fund to the goal's horizon</p><p class="d">Under 3 years: liquid/debt funds. 3–5 years: aggressive hybrid. 5+ years: equity — a broad index fund (Nifty 50 / Nifty 500) is the sensible default.</p></div></div>
+      <div class="reco p-gold"><span class="pin">2</span><div><p class="t">Costs compound against you</p><p class="d">Prefer direct plans over regular, and low expense ratios. An index fund at ~0.2% beats most active funds at ~1.5–2% over long periods.</p></div></div>
+      <div class="reco p-gold"><span class="pin">3</span><div><p class="t">Judge 3–5 year consistency, not last month</p><p class="d">Compare a fund's rolling returns to its benchmark and category. A fund that never tops the charts but never falls apart usually wins the decade.</p></div></div>
+    </div>
+
+    <div class="eyebrow">Stock watchlist — live quotes</div>
+    <div class="card">
+      <p class="hint">Add NSE symbols you follow. Tapping a symbol opens its live Google Finance quote; the links below open today's market movers.</p>
+      <div id="stockWatch"></div>
+      <div class="btn-row" style="margin-bottom:14px;"><button class="btn ghost sm" id="addStock">+ Add symbol</button></div>
+      <div>
+        <a class="linkout" href="https://www.google.com/finance/quote/NIFTY_50:INDEXNSE" target="_blank" rel="noopener">NIFTY 50 live ↗</a>
+        <a class="linkout" href="https://www.google.com/finance/quote/SENSEX:INDEXBOM" target="_blank" rel="noopener">SENSEX live ↗</a>
+        <a class="linkout" href="https://www.nseindia.com/market-data/top-gainers-losers" target="_blank" rel="noopener">Today's top gainers / losers ↗</a>
+        <a class="linkout" href="https://www.screener.in/screens/" target="_blank" rel="noopener">Stock screens ↗</a>
+      </div>
+    </div>
+
+    <div class="eyebrow">A straight word on stock tips</div>
+    <div class="card">
+      <p class="hint" style="margin-bottom:8px;">This app will not tell you "the best stock for tomorrow" — because nothing can. Day-to-day moves are close to random, and anyone selling next-day picks is selling noise. What actually works:</p>
+      <div class="reco p-note"><span class="pin">•</span><div><p class="t">For days &amp; weeks — don't play</p><p class="d">Short-term trading against professionals and algorithms is a losing game for individuals after costs and taxes.</p></div></div>
+      <div class="reco p-note"><span class="pin">•</span><div><p class="t">For months — momentum, cautiously</p><p class="d">If you must, momentum factor funds (e.g. Nifty 200 Momentum 30 index funds) systematise "what's been winning" without single-stock risk.</p></div></div>
+      <div class="reco p-note"><span class="pin">•</span><div><p class="t">For years — own the market</p><p class="d">A broad index SIP has beaten the large majority of active stock-picking over 10-year periods in India. Boring wins.</p></div></div>
+    </div>
+  </section>
+
+  <!-- ADVICE -->
+  <section class="view" id="advice" role="tabpanel">
+    <h2 class="sec serif">Financial advice</h2>
+    <p class="sub">Two parts: advice generated from your live numbers, and a foundation checklist every household should clear. Tap items to mark them done.</p>
+
+    <div class="eyebrow">Based on your numbers right now <span class="pill ok" style="margin-left:6px;">Live — updates as you edit</span></div>
+    <div class="card"><div id="adviceLive"></div></div>
+
+    <div class="eyebrow">Foundation checklist</div>
+    <div class="card"><div id="adviceChecklist"></div></div>
+
+    <div class="eyebrow">Rules of thumb worth keeping</div>
+    <div class="card">
+      <div class="reco p-save"><span class="pin">50</span><div><p class="t">50 / 30 / 20</p><p class="d">Needs ≤50%, wants ≤30%, saving ≥20% of take-home. Your current split shows on the Dashboard.</p></div></div>
+      <div class="reco p-save"><span class="pin">3×</span><div><p class="t">Emergency fund = 3–6 months of essentials</p><p class="d">In a liquid fund or sweep-in FD. Not equity — this money's job is to exist, not to grow.</p></div></div>
+      <div class="reco p-save"><span class="pin">40</span><div><p class="t">Keep EMIs under 40% of take-home</p><p class="d">Lenders' ceiling, and a good personal one. Under ~36% is comfortable.</p></div></div>
+      <div class="reco p-save"><span class="pin">10×</span><div><p class="t">Term cover ≈ 10–15× annual income</p><p class="d">Pure term insurance, not endowment/ULIP. Cheap at your age, ruinously expensive to delay.</p></div></div>
+    </div>
+
+    <footer>Educational reference only, not personalised financial advice. For large decisions, a SEBI-registered fee-only advisor is worth the fee.</footer>
+  </section>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const KEY="moneydesk.family.v1";
+const uid=()=>Math.random().toString(36).slice(2,9);
+
+/* ---------- storage ---------- */
+const store={
+  save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} },
+  load(){
+    try{ const v=localStorage.getItem(KEY); return v?JSON.parse(v):null; }catch(e){ return null; }
+  }
+};
+function migrate(o){
+  o.bills=o.bills||[]; o.history=o.history||[]; o.stocks=o.stocks||[];
+  o.mfWatch=o.mfWatch||[]; o.checklist=o.checklist||{};
+  o.sip=o.sip||{amt:0,years:5,rate:12};
+  o.paid=o.paid||{};
+  o.bills.forEach(b=>{ if(!b.cat) b.cat="Other"; });
+  o.debts.forEach(d=>{ if(d.dueDay===undefined) d.dueDay=0; });
+  o.goals=o.goals||{house:0,emergency:null};
+  if(o.goals.invest===undefined) o.goals.invest=0;
+  return o;
+}
+
+/* ---------- seed ---------- */
+function seed(){
+  return {
+    income:0,
+    expenses:[],
+    debts:[],
+    cards:[],
+    investments:[],
+    bills:[],
+    paid:{},
+    history:[],
+    stocks:[],
+    mfWatch:[],
+    checklist:{},
+    sip:{amt:0,years:5,rate:12},
+    goals:{house:0,emergency:null,invest:0},
+    settings:{theme:null}
+  };
+}
+let state = migrate(store.load() || seed());
+
+/* ---------- helpers ---------- */
+function inr(n){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  n=Math.round(n); const neg=n<0; n=Math.abs(n);
+  const s=n.toString(); let last3=s.slice(-3); let rest=s.slice(0,-3);
+  if(rest) last3=","+last3;
+  rest=rest.replace(/\B(?=(\d{2})+(?!\d))/g,",");
+  return (neg?"-":"")+"₹"+rest+last3;
+}
+function inrShort(n){
+  const a=Math.abs(n);
+  if(a>=1e7) return (n/1e7).toFixed(1)+"Cr";
+  if(a>=1e5) return (n/1e5).toFixed(1)+"L";
+  if(a>=1e3) return (n/1e3).toFixed(0)+"k";
+  return String(Math.round(n));
+}
+const numOr0=v=>{ const n=parseFloat(String(v).replace(/[^0-9.-]/g,"")); return isNaN(n)?0:n; };
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function totalEmi(){ return state.debts.reduce((a,d)=>a+numOr0(d.emi),0); }
+function totalExp(){ return state.expenses.reduce((a,e)=>a+numOr0(e.amount),0); }
+function essential(){ return state.expenses.filter(e=>e.kind==="essential").reduce((a,e)=>a+numOr0(e.amount),0)+totalEmi(); }
+function discretionary(){ return state.expenses.filter(e=>e.kind!=="essential").reduce((a,e)=>a+numOr0(e.amount),0); }
+function outflow(){ return totalExp()+totalEmi(); }
+function surplus(){ return numOr0(state.income)-outflow(); }
+function dti(){ const i=numOr0(state.income); return i>0?totalEmi()/i*100:0; }
+function emergencyTarget(){ return state.goals.emergency!=null?numOr0(state.goals.emergency):Math.round(essential()*3); }
+function emergencyHave(){ return state.investments.filter(i=>i.type==="Emergency").reduce((a,i)=>a+numOr0(i.current),0); }
+function netWorth(){
+  const inv=state.investments.reduce((a,i)=>a+numOr0(i.current),0);
+  const debt=state.debts.reduce((a,d)=>a+numOr0(d.outstanding),0);
+  const cardDue=state.cards.reduce((a,c)=>a+numOr0(c.balance),0);
+  return inv-debt-cardDue;
+}
+function payoff(P,annualRate,E){
+  P=numOr0(P); annualRate=numOr0(annualRate); E=numOr0(E);
+  if(P<=0||annualRate<=0||E<=0) return null;
+  const r=annualRate/12/100;
+  if(E<=P*r) return {impossible:true};
+  const n=-Math.log(1-(P*r)/E)/Math.log(1+r);
+  return {months:Math.ceil(n), interest:Math.round(E*n-P)};
+}
+function sipFV(P,years,ratePct){ // ordinary annuity-due monthly SIP
+  P=numOr0(P); years=numOr0(years); const r=numOr0(ratePct)/12/100; const n=years*12;
+  if(P<=0||n<=0) return 0;
+  if(r===0) return P*n;
+  return P*((Math.pow(1+r,n)-1)/r)*(1+r);
+}
+function sipRequired(target,years,ratePct){
+  target=numOr0(target); const r=numOr0(ratePct)/12/100; const n=numOr0(years)*12;
+  if(target<=0||n<=0) return 0;
+  if(r===0) return target/n;
+  return target/(((Math.pow(1+r,n)-1)/r)*(1+r));
+}
+
+let saveTimer;
+function persist(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>store.save(state),150); }
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1700); }
+
+/* ---------- unified due calendar ---------- */
+function nextDue(day){
+  day=Math.min(Math.max(Math.round(numOr0(day)),1),31);
+  const now=new Date(); const y=now.getFullYear(), m=now.getMonth();
+  const dim=(yy,mm)=>new Date(yy,mm+1,0).getDate();
+  let d=new Date(y,m,Math.min(day,dim(y,m)));
+  d.setHours(23,59,59,0);
+  if(d<now){ d=new Date(y,m+1,Math.min(day,dim(y,m+1))); d.setHours(23,59,59,0); }
+  const days=Math.ceil((d-now)/86400000);
+  return {date:d,days};
+}
+function dateKey(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function dueItems(){
+  const items=[];
+  state.bills.filter(b=>b.label&&numOr0(b.day)>0).forEach(b=>
+    items.push({key:"b:"+b.id,label:b.label,amount:numOr0(b.amount),day:numOr0(b.day),cat:b.cat||"Other"}));
+  state.debts.filter(d=>numOr0(d.dueDay)>0&&numOr0(d.emi)>0).forEach(d=>
+    items.push({key:"d:"+d.id,label:(d.label||"Loan")+" EMI",amount:numOr0(d.emi),day:numOr0(d.dueDay),cat:"Loan EMI"}));
+  state.cards.filter(c=>numOr0(c.due)>0).forEach(c=>
+    items.push({key:"c:"+c.id,label:(c.name||"Card")+" bill",amount:numOr0(c.balance),day:numOr0(c.due),cat:"Credit card"}));
+  return items.map(it=>{
+    const nd=nextDue(it.day);
+    return {...it,...nd,paid:state.paid[it.key]===dateKey(nd.date)};
+  }).sort((a,b)=>(a.paid-b.paid)||(a.days-b.days)||a.label.localeCompare(b.label));
+}
+function togglePaid(key){
+  const it=dueItems().find(x=>x.key===key); if(!it) return;
+  if(state.paid[key]===dateKey(it.date)) delete state.paid[key];
+  else state.paid[key]=dateKey(it.date);
+  persist(); renderOutputs();
+}
+function prunePaid(){
+  const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-45);
+  for(const k of Object.keys(state.paid)){
+    const d=new Date(state.paid[k]);
+    if(isNaN(d)||d<cutoff) delete state.paid[k];
+  }
+}
+function billChip(b){
+  const cls=(b.paid?"paid ":"")+(b.days<=2?"urgent":(b.days<=5?"soon":""));
+  const when=b.days===0?"today":(b.days===1?"1 day":b.days+" days");
+  const dstr=b.date.toLocaleDateString("en-IN",{day:"numeric",month:"short"});
+  return `<div class="duechip ${cls}">
+    <span class="days">${b.paid?"paid":when}</span>
+    <span class="lbl">${esc(b.label)}<span class="cat">${esc(b.cat)} · due ${dstr}</span></span>
+    <span class="amt num">${b.amount>0?inr(b.amount):""}</span>
+    <button class="paybtn" data-pay="${b.key}" title="${b.paid?"Mark unpaid":"Mark paid"}" aria-label="${b.paid?"Mark unpaid":"Mark paid"}">✓</button>
+  </div>`;
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-pay]"); if(b) togglePaid(b.dataset.pay);
+});
+
+/* ---------- monthly snapshots + dashboard filter ---------- */
+let viewing=null; // null = live; else "YYYY-MM"
+const M_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const M_LONG=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function captureSnapshot(){
+  const mk=monthKey();
+  const snap={
+    month:mk, value:netWorth(),
+    income:numOr0(state.income), outflow:outflow(), surplus:surplus(), dti:+dti().toFixed(1),
+    invested:state.investments.reduce((a,i)=>a+numOr0(i.invested),0),
+    portfolio:state.investments.reduce((a,i)=>a+numOr0(i.current),0),
+    emergency:emergencyHave(), emTarget:emergencyTarget(),
+    debtOut:state.debts.reduce((a,d)=>a+numOr0(d.outstanding),0),
+    cardDue:state.cards.reduce((a,c)=>a+numOr0(c.balance),0)
+  };
+  const h=state.history.find(x=>x.month===mk);
+  if(h) Object.assign(h,snap); else state.history.push(snap);
+}
+function sortedHistory(){ return [...state.history].sort((a,b)=>a.month.localeCompare(b.month)); }
+function renderDashFilter(){
+  const hs=sortedHistory();
+  const months=hs.map(h=>h.month);
+  if(!months.includes(monthKey())) months.push(monthKey());
+  const years=[...new Set(months.map(m=>m.slice(0,4)))].sort().reverse();
+  const shown=viewing||monthKey();
+  const [sy,sm]=shown.split("-");
+  const ySel=document.getElementById("viewYear"), mSel=document.getElementById("viewMonth");
+  ySel.innerHTML=years.map(y=>`<option value="${y}" ${y===sy?"selected":""}>${y}</option>`).join("");
+  const monthsInYear=months.filter(m=>m.startsWith(sy)).map(m=>m.slice(5)).sort();
+  mSel.innerHTML=monthsInYear.map(mm=>`<option value="${mm}" ${mm===sm?"selected":""}>${M_LONG[+mm-1]}</option>`).join("");
+  document.getElementById("backLive").hidden=!viewing;
+}
+function heroDelta(month, value){
+  const hs=sortedHistory();
+  const idx=hs.findIndex(h=>h.month===month);
+  const prev=idx>0?hs[idx-1]:null;
+  const el=document.getElementById("heroDelta");
+  if(!prev){ el.hidden=true; return; }
+  const d=value-prev.value;
+  const [,pm]=prev.month.split("-");
+  el.hidden=false;
+  el.className="delta "+(d<0?"down":"");
+  el.textContent=(d>=0?"▲ +":"▼ −")+inr(Math.abs(d)).replace("₹","₹")+" vs "+M_SHORT[+pm-1];
+}
+function renderTargets(){
+  const rows=[];
+  const eh=emergencyHave(), et=emergencyTarget();
+  rows.push({label:"Emergency fund",have:eh,target:et,cls:""});
+  const port=state.investments.reduce((a,i)=>a+numOr0(i.current),0);
+  const it=numOr0(state.goals.invest);
+  rows.push({label:"Investments",have:port,target:it,cls:"plum"});
+  const hf=state.investments.filter(i=>i.type==="House fund").reduce((a,i)=>a+numOr0(i.current),0);
+  const ht=numOr0(state.goals.house);
+  rows.push({label:"House fund",have:hf,target:ht,cls:"gold"});
+  document.getElementById("targetBars").innerHTML=rows.map(r=>{
+    const pct=r.target>0?Math.min(r.have/r.target*100,100):0;
+    const amt=r.target>0?`${inr(r.have)}<br><span class="pct">${(r.have/r.target*100).toFixed(0)}% of ${inrShort(r.target)}</span>`
+                        :`${inr(r.have)}<br><span class="pct">no target set</span>`;
+    return `<div class="bar-row"><span class="bar-label">${r.label}</span>
+      <div class="bar-track"><div class="bar-fill ${r.cls}" style="width:${pct.toFixed(1)}%"></div></div>
+      <span class="bar-amt num">${amt}</span></div>`;
+  }).join("");
+  const hint=[];
+  if(state.goals.emergency==null) hint.push(`Emergency target auto-set to 3× essential spend (${inr(et)}) — type a number to override.`);
+  if(ht>0&&hf===0) hint.push(`Tag holdings as type “House fund” on the Invest tab to track house progress.`);
+  document.getElementById("goalNote").innerHTML=hint.join(" ");
+}
+function renderArchived(){
+  const snap=state.history.find(h=>h.month===viewing);
+  const [yy,mm]=viewing.split("-");
+  document.getElementById("archBanner").hidden=false;
+  document.getElementById("archBanner").textContent=`Viewing ${M_LONG[+mm-1]} ${yy} — archived snapshot. Numbers are frozen as of that month.`;
+  document.querySelectorAll(".live-only").forEach(el=>el.hidden=true);
+  const v=x=>x===undefined?"—":inr(x);
+  document.getElementById("heroLabel").textContent="Net worth · "+M_SHORT[+mm-1]+" "+yy;
+  document.getElementById("heroNW").textContent=v(snap?snap.value:undefined);
+  document.getElementById("heroNote").textContent="as archived that month";
+  heroDelta(viewing, snap?snap.value:0);
+  document.getElementById("dOutflow").textContent=v(snap&&snap.outflow);
+  const sEl=document.getElementById("dSurplus");
+  sEl.textContent=v(snap&&snap.surplus);
+  sEl.className="v num "+((snap&&snap.surplus<0)?"neg":"pos");
+  document.getElementById("dDti").textContent=snap&&snap.dti!==undefined?snap.dti.toFixed(1)+"%":"—";
+  const det=document.getElementById("archDetails");
+  det.hidden=false;
+  document.getElementById("archDetailsBody").innerHTML=`
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Take-home that month</span><span class="bar-amt num">${v(snap&&snap.income)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Portfolio value</span><span class="bar-amt num">${v(snap&&snap.portfolio)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Emergency fund</span><span class="bar-amt num">${v(snap&&snap.emergency)}${snap&&snap.emTarget?` <span class="pct">/ ${inrShort(snap.emTarget)} target</span>`:""}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Loan balances</span><span class="bar-amt num">${v(snap&&snap.debtOut)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Card dues</span><span class="bar-amt num">${v(snap&&snap.cardDue)}</span></div>`;
+}
+
+/* ---------- render outputs ---------- */
+function renderOutputs(){
+  captureSnapshot();
+  renderDashFilter();
+  if(viewing&&viewing!==monthKey()){ renderArchived(); }
+  else{
+    viewing=null;
+    document.getElementById("archBanner").hidden=true;
+    document.getElementById("archDetails").hidden=true;
+    document.querySelectorAll(".live-only").forEach(el=>el.hidden=false);
+    renderLiveDash();
+  }
+  // Debt tab gauge + Expenses tab totals (always live, independent of dashboard view)
+  const dNow=dti();
+  document.getElementById("dtiFigure").textContent=dNow.toFixed(1)+"%";
+  document.getElementById("dtiCaption").textContent=`of take-home goes to EMIs (${inr(totalEmi())}/mo)`;
+  document.getElementById("dtiFill").style.width=Math.min(dNow,100)+"%";
+  const verdict=document.getElementById("dtiVerdict");
+  if(dNow===0) verdict.innerHTML=`No EMIs recorded yet.`;
+  else if(dNow<36) verdict.innerHTML=`<span class="pill ok">Healthy</span> Comfortably under the ~40% ceiling lenders watch. The priority is your highest-rate loan.`;
+  else if(dNow<43) verdict.innerHTML=`<span class="pill warn">Watch</span> Near the ~40% ceiling. Avoid new EMIs; lean into the costliest loan.`;
+  else verdict.innerHTML=`<span class="pill warn">High</span> Above the ~40% ceiling. Prioritise clearing balances before anything else.`;
+  document.getElementById("essTotal").textContent=inr(essential());
+  document.getElementById("discTotal").textContent=inr(discretionary());
+
+  renderDebtStrategy(); renderPayoffSelect(); computePayoff();
+  renderCardsSummary(); renderBillsUpcoming();
+  renderInvest(); renderSip(); renderNWHistory();
+  renderReco(); renderAdvice();
+}
+function renderLiveDash(){
+  const out=outflow(), sur=surplus(), d=dti();
+  document.getElementById("dOutflow").textContent=inr(out);
+  const sEl=document.getElementById("dSurplus"); sEl.textContent=inr(sur);
+  sEl.className="v num "+(sur>=0?"pos":"neg");
+  document.getElementById("dDti").textContent=d.toFixed(1)+"%";
+
+  const nw=netWorth();
+  document.getElementById("heroLabel").textContent="Net worth";
+  document.getElementById("heroNW").textContent=inr(nw);
+  document.getElementById("heroNote").textContent="investments − loan balances − card dues";
+  heroDelta(monthKey(), nw);
+  renderTargets();
+
+  // dash bills — unpaid items due within 7 days
+  const ups=dueItems().filter(b=>b.days<=7&&!b.paid);
+  document.getElementById("dashBills").innerHTML=ups.length?ups.map(billChip).join(""):`<div class="empty">Nothing unpaid due in the next 7 days.</div>`;
+
+  // breakdown
+  const items=[
+    ...state.expenses.map(e=>({label:e.label,amount:numOr0(e.amount),debt:false})),
+    ...state.debts.map(dd=>({label:dd.label+" (EMI)",amount:numOr0(dd.emi),debt:true}))
+  ].filter(x=>x.amount>0).sort((a,b)=>b.amount-a.amount);
+  const max=items.length?items[0].amount:1;
+  document.getElementById("breakdown").innerHTML=items.length?items.map(it=>{
+    const pct=out>0?(it.amount/out*100):0;
+    return `<div class="bar-row"><span class="bar-label">${esc(it.label)}</span>
+      <div class="bar-track"><div class="bar-fill ${it.debt?"debt":""}" style="width:${(it.amount/max*100).toFixed(1)}%"></div></div>
+      <span class="bar-amt num">${inr(it.amount)}<br><span class="pct">${pct.toFixed(1)}%</span></span></div>`;
+  }).join(""):`<div class="empty">Add expenses and loans to see the breakdown.</div>`;
+}
+
+/* ---------- recommendations (shared dashboard) ---------- */
+function buildRecos(){
+  const sur=surplus(), out=[], have=emergencyHave(), target=emergencyTarget();
+  const rated=state.debts.filter(d=>numOr0(d.rate)>0&&numOr0(d.outstanding)>0).sort((a,b)=>numOr0(b.rate)-numOr0(a.rate));
+  const worst=rated[0];
+  const starter=Math.round(essential()*0.5);
+  let n=1;
+  if(worst&&numOr0(worst.rate)>=15){
+    const extra=Math.max(sur-Math.min(12000,Math.max(sur*0.3,0)),0);
+    const po=payoff(worst.outstanding,worst.rate,numOr0(worst.emi)+extra);
+    const base=payoff(worst.outstanding,worst.rate,worst.emi);
+    out.push({p:"debt",n:n++,t:`Attack ${esc(worst.label)} first — ${numOr0(worst.rate)}% interest`,
+      d:`No safe investment beats a guaranteed ${numOr0(worst.rate)}% return. Put about <b>${inr(extra)}/mo</b> extra on it${po&&!po.impossible?` — clears in ~<b>${po.months} months</b>, saving <b>${inr((base&&!base.impossible?base.interest:0)-po.interest)}</b> interest`:``}. Also ask your bank about a balance transfer to ~11–16%.`});
+  }
+  if(have<starter){
+    out.push({p:"save",n:n++,t:`Hold a starter cash buffer`,
+      d:`Park about <b>${inr(starter-have)}</b> in a liquid fund or sweep-in FD so a surprise bill never lands on a high-rate loan. Log it under Invest as type <b>Emergency</b>.`});
+  }
+  const cleared=!worst||numOr0(worst.rate)<15;
+  if(cleared&&have<target){
+    out.push({p:"save",n:n++,t:`Build the emergency fund to ${inr(target)}`,
+      d:`3 months of essentials (${inr(essential())}/mo). You have <b>${inr(have)}</b> — <b>${inr(target-have)}</b> to go before locking money into long-horizon goals.`});
+  }
+  if(cleared&&have>=target){
+    out.push({p:"gold",n:n++,t:`Start the house downpayment SIP`,
+      d:`Emergency fund is set. Direct your surplus (${inr(Math.max(sur,0))}/mo) toward ${inr(numOr0(state.goals.house))}. Use the SIP projector on the Invest tab to size it.`});
+  }
+  const dq=dti();
+  if(dq>=43){
+    out.push({p:"debt",n:n++,t:`Debt quotient is ${dq.toFixed(0)}% — above the ceiling`,
+      d:`EMIs of <b>${inr(totalEmi())}</b> eat ${dq.toFixed(0)}% of take-home. Pause any new borrowing; each cleared loan drops this number immediately.`});
+  } else if(dq>=36){
+    out.push({p:"debt",n:n++,t:`Debt quotient is ${dq.toFixed(0)}% — near the ceiling`,
+      d:`Lenders get uncomfortable past ~40%. Avoid new EMIs until this falls; clearing the smallest loan fully is the quickest way to buy breathing room.`});
+  }
+  const inc0=numOr0(state.income);
+  if(inc0>0){
+    const saveRate=Math.max(surplus(),0)/inc0*100;
+    if(saveRate<20 && sur>=0) out.push({p:"save",n:n++,t:`Saving rate is ${saveRate.toFixed(0)}% — push toward 20%`,
+      d:`Of ${inr(inc0)} take-home, <b>${inr(Math.max(sur,0))}</b> is left to save. Every ₹1,000 trimmed from discretionary spend (${inr(discretionary())}/mo) moves this up.`});
+  }
+  const retire=state.investments.filter(i=>i.type==="Retirement").reduce((a,i)=>a+numOr0(i.current),0);
+  out.push({p:"note",n:n++,t:`Keep retirement on the radar`,
+    d:retire>0
+      ?`Retirement holdings stand at <b>${inr(retire)}</b>. If that's EPF alone, it's thin — once nearer goals are funded, consider NPS Tier 1 for the extra ₹50,000/yr deduction under 80CCD(1B) on the old regime.`
+      :`No retirement holdings logged yet. EPF/PPF/NPS compound best when started early — even a small monthly amount counts. Log them under Invest as type <b>Retirement</b>.`});
+  if(sur<0){
+    out.unshift({p:"debt",n:0,t:`Spending exceeds take-home`,
+      d:`Outflow is <b>${inr(-sur)}</b> over income. Trim discretionary spend (${inr(discretionary())}/mo) before any new commitment.`});
+    out.forEach((r,i)=>r.n=i+1);
+  }
+  return out;
+}
+function renderReco(){
+  document.getElementById("dashReco").innerHTML=buildRecos().map(r=>
+    `<div class="reco p-${r.p}"><span class="pin">${r.n}</span><div><p class="t">${r.t}</p><p class="d">${r.d}</p></div></div>`).join("");
+}
+
+/* ---------- debt strategy + payoff tool ---------- */
+function renderDebtStrategy(){
+  const el=document.getElementById("debtStrategy");
+  const rated=state.debts.filter(d=>numOr0(d.rate)>0).sort((a,b)=>numOr0(b.rate)-numOr0(a.rate));
+  if(!rated.length){ el.innerHTML=`<div class="empty">Add an interest rate to each loan to get a payoff order (avalanche — highest rate first).</div>`; return; }
+  el.innerHTML=rated.map((d,i)=>{
+    const tag=i===0?`<span class="pill warn">Pay first</span>`:``;
+    return `<div class="reco p-debt"><span class="pin">${i+1}</span><div>
+      <p class="t">${esc(d.label)} — ${numOr0(d.rate)}% ${tag}</p>
+      <p class="d">Balance <b>${inr(numOr0(d.outstanding))}</b> · EMI ${inr(numOr0(d.emi))}. ${i===0?"Highest rate — every spare rupee goes here until it's gone.":"Next in line once the loan above is cleared."}</p></div></div>`;
+  }).join("")+`<p class="alloc-note">Method: <b>avalanche</b> — highest interest rate first saves the most money overall.</p>`;
+}
+function renderPayoffSelect(){
+  const sel=document.getElementById("payoffSel"); const prev=sel.value;
+  const opts=state.debts.filter(d=>numOr0(d.outstanding)>0&&numOr0(d.rate)>0);
+  sel.innerHTML=opts.length?opts.map(d=>`<option value="${d.id}">${esc(d.label)} · ${numOr0(d.rate)}%</option>`).join("")
+                           :`<option value="">Add a loan with balance + rate</option>`;
+  if(opts.some(d=>d.id===prev)) sel.value=prev;
+}
+function computePayoff(){
+  const sel=document.getElementById("payoffSel");
+  const d=state.debts.find(x=>x.id===sel.value);
+  const rT=document.getElementById("rTime"),rI=document.getElementById("rInterest"),rS=document.getElementById("rSaved"),note=document.getElementById("payoffNote");
+  if(!d){ rT.textContent=rI.textContent=rS.textContent="—"; note.textContent=""; return; }
+  const extra=numOr0(document.getElementById("extraInput").value);
+  const base=payoff(d.outstanding,d.rate,d.emi);
+  const we=payoff(d.outstanding,d.rate,numOr0(d.emi)+extra);
+  if(!we){ rT.textContent=rI.textContent=rS.textContent="—"; note.textContent="Enter balance, rate and EMI for this loan."; return; }
+  if(we.impossible){ rT.textContent="never"; rI.textContent="—"; rS.textContent="—"; note.textContent="Payment too small to cover interest — increase EMI or extra."; return; }
+  rT.textContent="~"+we.months+" mo";
+  rI.textContent="~"+inr(we.interest);
+  const saved=base&&!base.impossible?base.interest-we.interest:0;
+  rS.textContent=saved>0?"~"+inr(saved):"—";
+  const sur=surplus();
+  note.innerHTML=extra>0
+    ?`Paying <b>${inr(extra)}</b> extra clears it about <b>${base&&!base.impossible?base.months-we.months:0} months</b> sooner.${sur>0?` Your surplus is ${inr(sur)}/mo.`:``}`
+    :`At the current EMI alone this runs ~${base&&!base.impossible?base.months:"—"} months. Try an extra amount above.`;
+}
+
+/* ---------- cards & bills ---------- */
+function renderCardsSummary(){
+  const owed=state.cards.reduce((a,c)=>a+numOr0(c.balance),0);
+  const limit=state.cards.reduce((a,c)=>a+numOr0(c.limit),0);
+  document.getElementById("cardOwed").textContent=inr(owed);
+  document.getElementById("cardUtil").textContent=limit>0?(owed/limit*100).toFixed(0)+"%":"—";
+}
+function renderBillsUpcoming(){
+  const items=dueItems();
+  const el=document.getElementById("billsUpcoming");
+  if(!items.length){ el.innerHTML=""; return; }
+  const total=items.reduce((a,b)=>a+b.amount,0);
+  const paidAmt=items.filter(b=>b.paid).reduce((a,b)=>a+b.amount,0);
+  el.innerHTML=`<div class="eyebrow" style="margin-top:0;">This cycle</div>
+    <div class="card" style="padding:13px 16px; margin-bottom:10px;">
+      <div class="bar-row" style="border:none; padding:3px 0;"><span class="bar-label" style="color:var(--ink-muted)">Committed / month</span><span></span><span class="bar-amt num">${inr(total)}</span></div>
+      <div class="bar-row" style="border:none; padding:3px 0;"><span class="bar-label" style="color:var(--ink-muted)">Marked paid</span><span></span><span class="bar-amt num" style="color:var(--accent)">${inr(paidAmt)} · ${items.filter(b=>b.paid).length}/${items.length}</span></div>
+    </div>`+items.map(billChip).join("");
+}
+
+/* ---------- invest ---------- */
+function renderInvest(){
+  const invested=state.investments.reduce((a,i)=>a+numOr0(i.invested),0);
+  const current=state.investments.reduce((a,i)=>a+numOr0(i.current),0);
+  const gain=current-invested;
+  document.getElementById("pInvested").textContent=inr(invested);
+  document.getElementById("pCurrent").textContent=inr(current);
+  const gEl=document.getElementById("pGain"); gEl.textContent=(gain>=0?"+":"")+inr(gain);
+  gEl.className="v num "+(gain>=0?"pos":"neg");
+  document.getElementById("pGainPct").textContent=invested>0?((gain/invested*100).toFixed(1)+"% return"):"—";
+  const byType={};
+  state.investments.forEach(i=>{ const t=i.type||"Other"; byType[t]=(byType[t]||0)+numOr0(i.current); });
+  const types=Object.entries(byType).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const allocCard=document.getElementById("allocCard");
+  if(types.length&&current>0){
+    allocCard.style.display="block";
+    const max=types[0][1];
+    document.getElementById("allocBars").innerHTML=types.map(([t,v])=>`
+      <div class="bar-row"><span class="bar-label">${esc(t)}</span>
+      <div class="bar-track"><div class="bar-fill gold" style="width:${(v/max*100).toFixed(1)}%"></div></div>
+      <span class="bar-amt num">${inr(v)}<br><span class="pct">${(v/current*100).toFixed(0)}%</span></span></div>`).join("");
+  } else allocCard.style.display="none";
+}
+
+/* SIP projector */
+function renderSip(){
+  const s=state.sip;
+  const fv=sipFV(s.amt,s.years,s.rate);
+  document.getElementById("sipFV").textContent=fv>0?inr(fv):"—";
+  document.getElementById("sipIn").textContent=fv>0?inr(numOr0(s.amt)*numOr0(s.years)*12):"—";
+  const house=numOr0(state.goals.house);
+  const req=sipRequired(house,s.years,s.rate);
+  document.getElementById("sipGoalNote").innerHTML=house>0&&numOr0(s.years)>0
+    ?`To reach your house target of <b>${inr(house)}</b> in ${s.years} years at ${s.rate}%/yr, you'd need a SIP of about <b>${inr(req)}/mo</b>.`
+    :`Set a house target under Goals to see the SIP it needs.`;
+}
+
+/* net worth history + SVG chart */
+function monthKey(d){ const dt=d||new Date(); return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0"); }
+function renderNWHistory(){
+  const list=document.getElementById("nwList");
+  const chart=document.getElementById("nwChart");
+  const h=[...state.history].sort((a,b)=>a.month.localeCompare(b.month));
+  if(!h.length){ chart.innerHTML=""; list.innerHTML=`<div class="empty">No entries yet. Log your first month above.</div>`; return; }
+  // chart
+  const vals=h.map(x=>x.value);
+  let lo=Math.min(...vals), hi=Math.max(...vals);
+  if(lo===hi){ lo-=1; hi+=1; }
+  const pad=(hi-lo)*0.12; lo-=pad; hi+=pad;
+  const W=600,H=170,L=8,R=8,T=12,B=24;
+  const x=i=>h.length===1?W/2:L+(W-L-R)*i/(h.length-1);
+  const y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const pts=h.map((p,i)=>x(i).toFixed(1)+","+y(p.value).toFixed(1)).join(" ");
+  const area=`M ${x(0).toFixed(1)},${(H-B)} L `+pts.split(" ").join(" L ")+` L ${x(h.length-1).toFixed(1)},${H-B} Z`;
+  const labels=h.map((p,i)=>{
+    if(h.length>8 && i%2===1 && i!==h.length-1) return "";
+    const [yy,mm]=p.month.split("-");
+    const name=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+mm-1];
+    return `<text x="${x(i)}" y="${H-7}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${name} ${yy.slice(2)}</text>`;
+  }).join("");
+  const dots=h.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="3.2" fill="var(--gold)"/>`).join("");
+  chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Net worth over time">
+    <path d="${area}" fill="var(--gold-soft)" opacity="0.7"/>
+    <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}${labels}
+  </svg>`;
+  // list (latest first)
+  list.innerHTML=[...h].reverse().map(p=>{
+    const [yy,mm]=p.month.split("-");
+    const name=["January","February","March","April","May","June","July","August","September","October","November","December"][+mm-1];
+    return `<div class="bar-row" style="grid-template-columns:1fr 110px 30px;">
+      <span class="bar-label">${name} ${yy}</span>
+      <span class="bar-amt num">${inr(p.value)}</span>
+      <button class="del" data-nwdel="${p.month}" title="Remove">×</button></div>`;
+  }).join("");
+}
+document.getElementById("nwList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-nwdel]"); if(!b) return;
+  state.history=state.history.filter(x=>x.month!==b.dataset.nwdel);
+  if(viewing===b.dataset.nwdel) viewing=null;
+  persist(); renderOutputs();
+});
+/* dashboard month/year filter */
+function onFilterChange(){
+  const sel=document.getElementById("viewYear").value+"-"+document.getElementById("viewMonth").value;
+  viewing=(sel===monthKey())?null:sel;
+  renderOutputs();
+}
+document.getElementById("viewYear").addEventListener("change",()=>{
+  // when year changes, snap to latest available month of that year
+  const y=document.getElementById("viewYear").value;
+  const months=[...new Set([...state.history.map(h=>h.month),monthKey()])].filter(m=>m.startsWith(y)).sort();
+  const target=months[months.length-1];
+  viewing=(target===monthKey())?null:target;
+  renderOutputs();
+});
+document.getElementById("viewMonth").addEventListener("change",onFilterChange);
+document.getElementById("backLive").addEventListener("click",()=>{ viewing=null; renderOutputs(); });
+document.getElementById("goalInvest").addEventListener("input",e=>{ state.goals.invest=numOr0(e.target.value); persist(); renderOutputs(); });
+
+/* ---------- advice tab ---------- */
+function renderAdvice(){
+  // live advice reuses recos plus extra situational rules
+  const recos=buildRecos();
+  const extra=[];
+  const d=dti();
+  const inc=numOr0(state.income);
+  if(inc>0){
+    const needs=essential()/inc*100, wants=discretionary()/inc*100, save=Math.max(surplus(),0)/inc*100;
+    extra.push({p:"note",t:`Your 50/30/20 split today`,
+      d:`Needs <b>${needs.toFixed(0)}%</b> · Wants <b>${wants.toFixed(0)}%</b> · Saving <b>${save.toFixed(0)}%</b>. ${save>=20?"Saving rate is on target — protect it.":"Saving below 20% — the debt payoff plan is what fixes this fastest."}`});
+  }
+  state.cards.forEach(c=>{
+    const util=numOr0(c.limit)>0?numOr0(c.balance)/numOr0(c.limit)*100:0;
+    if(util>30) extra.push({p:"debt",t:`${esc(c.name)} utilization is ${util.toFixed(0)}%`,
+      d:`Above 30% of the limit hurts your credit score even if you pay in full. Paying it below <b>${inr(numOr0(c.limit)*0.3)}</b> before the statement date fixes the reported number.`});
+  });
+  const all=[...recos,...extra.map((e,i)=>({...e,n:recos.length+i+1}))];
+  document.getElementById("adviceLive").innerHTML=all.map(r=>
+    `<div class="reco p-${r.p}"><span class="pin">${r.n||"•"}</span><div><p class="t">${r.t}</p><p class="d">${r.d}</p></div></div>`).join("");
+  renderChecklist();
+}
+const CHECKLIST=[
+  {k:"term",t:"Term life insurance (10–15× annual income)",d:"Pure term plan if anyone depends on your income. Skip ULIPs and endowment plans — insurance and investment don't mix well."},
+  {k:"health",t:"Health insurance beyond employer cover",d:"A personal ₹10–25L family floater plus a super top-up. Employer cover vanishes the day the job does."},
+  {k:"emerg",t:"Emergency fund at 3–6 months of essentials",d:"Liquid fund or sweep-in FD. This is what keeps a bad month from becoming new debt."},
+  {k:"nominee",t:"Nominees + will updated everywhere",d:"Bank accounts, EPF, mutual funds, insurance, demat. Ten minutes of paperwork that saves your family months."},
+  {k:"regime",t:"Tax regime checked (old vs new)",d:"Decides whether 80C (ELSS, PPF) and 80CCD(1B) (NPS) deductions are worth structuring for. Recheck each April."},
+  {k:"cibil",t:"Credit report pulled this year",d:"One free CIBIL report a year. Check for errors and old accounts — they're common and fixable."},
+  {k:"auto",t:"Savings automated on salary day",d:"SIPs and transfers on the 1st–3rd, before spending starts. What leaves first gets saved; what waits gets spent."}
+];
+function renderChecklist(){
+  document.getElementById("adviceChecklist").innerHTML=CHECKLIST.map(c=>{
+    const done=!!state.checklist[c.k];
+    return `<div class="adv-check ${done?"done":""}" data-check="${c.k}" role="checkbox" aria-checked="${done}" tabindex="0">
+      <span class="adv-box">${done?"✓":""}</span>
+      <div><p class="adv-t">${c.t}</p><p class="adv-d">${c.d}</p></div></div>`;
+  }).join("");
+}
+document.getElementById("adviceChecklist").addEventListener("click",e=>{
+  const el=e.target.closest("[data-check]"); if(!el) return;
+  const k=el.dataset.check; state.checklist[k]=!state.checklist[k];
+  persist(); renderChecklist();
+});
+
+/* ---------- markets: mutual funds via mfapi.in ---------- */
+const MF_API="https://api.mfapi.in";
+function mfStatus(msg){ document.getElementById("mfStatus").textContent=msg||""; }
+function parseNavDate(s){ const [dd,mm,yy]=s.split("-"); return new Date(+yy,+mm-1,+dd); }
+function computeReturns(data){
+  // data: [{date:"dd-mm-yyyy", nav:"123.45"}, ...] latest first
+  if(!data||!data.length) return null;
+  const latest={date:parseNavDate(data[0].date), nav:parseFloat(data[0].nav)};
+  function navAt(daysAgo){
+    const target=new Date(latest.date); target.setDate(target.getDate()-daysAgo);
+    for(let i=0;i<data.length;i++){
+      if(parseNavDate(data[i].date)<=target) return parseFloat(data[i].nav);
+    }
+    return null;
+  }
+  const r={latest};
+  const n1=navAt(365); if(n1) r.y1=(latest.nav/n1-1)*100;
+  const n3=navAt(365*3); if(n3) r.y3=(Math.pow(latest.nav/n3,1/3)-1)*100;
+  const n5=navAt(365*5); if(n5) r.y5=(Math.pow(latest.nav/n5,1/5)-1)*100;
+  return r;
+}
+async function mfSearchRun(){
+  const q=document.getElementById("mfSearch").value.trim();
+  const box=document.getElementById("mfResults");
+  if(!q){ box.innerHTML=""; return; }
+  mfStatus("Searching…");
+  try{
+    const res=await fetch(MF_API+"/mf/search?q="+encodeURIComponent(q));
+    if(!res.ok) throw new Error("bad status");
+    const arr=await res.json();
+    if(!arr.length){ box.innerHTML=`<div class="empty">No funds matched "${esc(q)}".</div>`; mfStatus(""); return; }
+    box.innerHTML=arr.slice(0,8).map(f=>
+      `<div class="sr" data-code="${f.schemeCode}" data-name="${esc(f.schemeName)}">
+        <span>${esc(f.schemeName)}</span><span class="add">+ Track</span></div>`).join("");
+    mfStatus("Tap a fund to add it to your watchlist.");
+  }catch(e){
+    box.innerHTML="";
+    mfStatus("Couldn't reach the fund data service — check your connection and try again.");
+  }
+}
+document.getElementById("mfSearchBtn").addEventListener("click",mfSearchRun);
+document.getElementById("mfSearch").addEventListener("keydown",e=>{ if(e.key==="Enter") mfSearchRun(); });
+document.getElementById("mfResults").addEventListener("click",e=>{
+  const el=e.target.closest("[data-code]"); if(!el) return;
+  const code=el.dataset.code;
+  if(state.mfWatch.some(m=>m.code===code)){ toast("Already tracking"); return; }
+  state.mfWatch.push({code, name:el.dataset.name});
+  persist(); document.getElementById("mfResults").innerHTML="";
+  document.getElementById("mfSearch").value="";
+  renderMfWatch(); loadMfData();
+});
+function renderMfWatch(){
+  const el=document.getElementById("mfWatch");
+  if(!state.mfWatch.length){ el.innerHTML=`<div class="empty">No funds tracked yet. Try searching “UTI Nifty 50 index direct” or “Parag Parikh flexi cap”.</div>`; return; }
+  el.innerHTML=state.mfWatch.map(m=>{
+    const r=m.data;
+    const ret=(label,v)=>v==null?"":`<span class="mf-ret">${label}<b class="${v>=0?"up":"down"}">${v>=0?"+":""}${v.toFixed(1)}%</b></span>`;
+    return `<div class="mf-card" data-code="${m.code}">
+      <div class="mf-top">
+        <span class="mf-name">${esc(m.name)}</span>
+        <span class="mf-nav num">${r?("₹"+r.latest.nav.toFixed(2)):"…"}</span>
+        <button class="del" data-mfdel title="Remove">×</button>
+      </div>
+      ${r?`<div class="mf-rets">${ret("1y ",r.y1)}${ret("3y/yr ",r.y3)}${ret("5y/yr ",r.y5)}
+        <span class="mf-ret">NAV date<b>${r.latest.date.toLocaleDateString("en-IN",{day:"numeric",month:"short"})}</b></span></div>`:""}
+    </div>`;
+  }).join("");
+}
+document.getElementById("mfWatch").addEventListener("click",e=>{
+  const b=e.target.closest("[data-mfdel]"); if(!b) return;
+  const code=e.target.closest("[data-code]").dataset.code;
+  state.mfWatch=state.mfWatch.filter(m=>m.code!==code);
+  persist(); renderMfWatch();
+});
+async function loadMfData(){
+  if(!state.mfWatch.length) return;
+  mfStatus("Fetching latest NAVs…");
+  let ok=0;
+  for(const m of state.mfWatch){
+    try{
+      const res=await fetch(MF_API+"/mf/"+m.code);
+      if(!res.ok) throw new Error();
+      const j=await res.json();
+      m.data=computeReturns(j.data);
+      if(j.meta&&j.meta.scheme_name) m.name=j.meta.scheme_name;
+      ok++;
+    }catch(e){ /* keep old data if any */ }
+  }
+  renderMfWatch();
+  mfStatus(ok?("Updated "+ok+" of "+state.mfWatch.length+" funds · NAVs publish once daily after market close."):"Couldn't reach the fund data service — showing last known values.");
+  // don't persist bulky NAV data, only names/codes
+  const slim=state.mfWatch.map(({code,name})=>({code,name}));
+  const keep=state.mfWatch; state.mfWatch=slim; persist(); state.mfWatch=keep;
+}
+document.getElementById("mfRefresh").addEventListener("click",loadMfData);
+
+/* ---------- markets: stock watchlist ---------- */
+function renderStocks(){
+  const el=document.getElementById("stockWatch");
+  if(!state.stocks.length){ el.innerHTML=`<div class="empty">No symbols yet. Add e.g. RELIANCE, TCS, HDFCBANK.</div>`; return; }
+  el.innerHTML=state.stocks.map(s=>`
+    <div class="row watch" data-id="${s.id}">
+      <div class="fld fld-wide"><label>NSE symbol</label><input data-f="symbol" value="${esc(s.symbol)}" placeholder="e.g. INFY" style="text-transform:uppercase;"></div>
+      <a class="linkout" style="margin:0; align-self:end;" href="https://www.google.com/finance/quote/${encodeURIComponent((s.symbol||"").toUpperCase())}:NSE" target="_blank" rel="noopener">Live quote ↗</a>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+document.getElementById("addStock").addEventListener("click",()=>{
+  state.stocks.push({id:uid(),symbol:""}); persist(); renderStocks();
+});
+document.getElementById("stockWatch").addEventListener("input",e=>{
+  const row=e.target.closest("[data-id]"); if(!row) return;
+  const s=state.stocks.find(x=>x.id===row.dataset.id); if(!s) return;
+  s.symbol=e.target.value.toUpperCase(); persist();
+  const a=row.querySelector("a.linkout");
+  if(a) a.href="https://www.google.com/finance/quote/"+encodeURIComponent(s.symbol)+":NSE";
+});
+document.getElementById("stockWatch").addEventListener("click",e=>{
+  const b=e.target.closest("[data-del]"); if(!b) return;
+  const id=e.target.closest("[data-id]").dataset.id;
+  state.stocks=state.stocks.filter(x=>x.id!==id);
+  persist(); renderStocks();
+});
+
+/* ---------- editable lists ---------- */
+function renderExpenses(){
+  const wrap=document.getElementById("expList");
+  if(!state.expenses.length){ wrap.innerHTML=`<div class="empty">No expenses yet.</div>`; return; }
+  wrap.innerHTML=state.expenses.map(e=>`
+    <div class="row exp" data-id="${e.id}">
+      <div class="fld fld-wide"><label>Item</label><input data-f="label" value="${esc(e.label)}" placeholder="e.g. Rent"></div>
+      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${e.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>Type</label><select data-f="kind">
+        <option value="essential" ${e.kind==="essential"?"selected":""}>Essential</option>
+        <option value="discretionary" ${e.kind!=="essential"?"selected":""}>Discretionary</option>
+      </select></div>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+function renderDebts(){
+  const wrap=document.getElementById("debtList");
+  if(!state.debts.length){ wrap.innerHTML=`<div class="empty">No loans yet.</div>`; return; }
+  wrap.innerHTML=state.debts.map(d=>{
+    const po=payoff(d.outstanding,d.rate,d.emi);
+    const meta=numOr0(d.rate)>0&&numOr0(d.outstanding)>0
+      ?(po&&po.impossible?`<div class="rowmeta"><b>EMI too low to ever clear this balance.</b></div>`
+        :po?`<div class="rowmeta">At this EMI: clears in ~${po.months} months, ~${inr(po.interest)} interest.</div>`:``)
+      :`<div class="rowmeta">Add balance + rate to enable payoff planning.</div>`;
+    return `<div class="row debt" data-id="${d.id}">
+      <div class="fld fld-wide"><label>Loan</label><input data-f="label" value="${esc(d.label)}" placeholder="e.g. Car loan"></div>
+      <div class="fld"><label>EMI / mo</label><input data-f="emi" class="num" inputmode="numeric" value="${d.emi||""}" placeholder="0"></div>
+      <div class="fld"><label>Rate %</label><input data-f="rate" class="num" inputmode="decimal" value="${d.rate||""}" placeholder="0"></div>
+      <div class="fld"><label>Balance</label><input data-f="outstanding" class="num" inputmode="numeric" value="${d.outstanding||""}" placeholder="0"></div>
+      <div class="fld"><label>Due day</label><input data-f="dueDay" class="num" inputmode="numeric" value="${d.dueDay||""}" placeholder="—"></div>
+      <button class="del" data-del title="Remove">×</button>
+      ${meta}
+    </div>`;
+  }).join("");
+}
+function renderCards(){
+  const wrap=document.getElementById("cardList");
+  if(!state.cards.length){ wrap.innerHTML=`<div class="empty">No cards yet.</div>`; return; }
+  wrap.innerHTML=state.cards.map(c=>{
+    const util=numOr0(c.limit)>0?numOr0(c.balance)/numOr0(c.limit)*100:0;
+    const flag=numOr0(c.limit)>0
+      ?(util>30?`<div class="rowmeta"><b>Utilization ${util.toFixed(0)}% — above 30%.</b> Below ${inr(numOr0(c.limit)*0.3)} helps your score.</div>`
+               :`<div class="rowmeta"><span class="ok">Utilization ${util.toFixed(0)}% — healthy.</span>${c.due?` Due day ${esc(c.due)}.`:``}</div>`)
+      :``;
+    return `<div class="row ccard" data-id="${c.id}">
+      <div class="fld fld-wide"><label>Card</label><input data-f="name" value="${esc(c.name)}" placeholder="e.g. HDFC"></div>
+      <div class="fld"><label>Balance</label><input data-f="balance" class="num" inputmode="numeric" value="${c.balance||""}" placeholder="0"></div>
+      <div class="fld"><label>Limit</label><input data-f="limit" class="num" inputmode="numeric" value="${c.limit||""}" placeholder="0"></div>
+      <div class="fld"><label>Due day (1–31)</label><input data-f="due" class="num" inputmode="numeric" value="${esc(c.due||"")}" placeholder="5"></div>
+      <button class="del" data-del title="Remove">×</button>
+      ${flag}
+    </div>`;
+  }).join("");
+}
+const BILL_CATS=["Utility","Rent","Insurance","Subscription","School/Fees","Other"];
+function renderBills(){
+  const wrap=document.getElementById("billList");
+  if(!state.bills.length){ wrap.innerHTML=`<div class="empty">No bills yet. Add electricity, water, internet, insurance premiums…</div>`; return; }
+  wrap.innerHTML=state.bills.map(b=>`
+    <div class="row bill" data-id="${b.id}">
+      <div class="fld fld-wide"><label>Bill</label><input data-f="label" value="${esc(b.label)}" placeholder="e.g. Electricity"></div>
+      <div class="fld"><label>₹ amount</label><input data-f="amount" class="num" inputmode="numeric" value="${b.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>Day (1–31)</label><input data-f="day" class="num" inputmode="numeric" value="${b.day||""}" placeholder="1"></div>
+      <div class="fld"><label>Category</label><select data-f="cat">
+        ${BILL_CATS.map(c=>`<option value="${c}" ${b.cat===c?"selected":""}>${c}</option>`).join("")}
+      </select></div>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+const INV_TYPES=["Emergency","Equity/SIP","Index fund","Debt fund/FD","Retirement","House fund","Gold","Other"];
+function renderInvList(){
+  const wrap=document.getElementById("invList");
+  if(!state.investments.length){ wrap.innerHTML=`<div class="empty">No holdings yet.</div>`; return; }
+  wrap.innerHTML=state.investments.map(i=>`
+    <div class="row inv" data-id="${i.id}">
+      <div class="fld fld-wide"><label>Holding</label><input data-f="label" value="${esc(i.label)}" placeholder="e.g. Nifty 50 SIP"></div>
+      <div class="fld"><label>Type</label><select data-f="type">
+        ${INV_TYPES.map(t=>`<option value="${t}" ${i.type===t?"selected":""}>${t}</option>`).join("")}
+      </select></div>
+      <div class="fld"><label>Invested</label><input data-f="invested" class="num" inputmode="numeric" value="${i.invested||""}" placeholder="0"></div>
+      <div class="fld"><label>Current</label><input data-f="current" class="num" inputmode="numeric" value="${i.current||""}" placeholder="0"></div>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+
+/* delegation binder */
+function bindList(containerId,collection,renderFn,numericFields){
+  const container=document.getElementById(containerId);
+  container.addEventListener("input",e=>{
+    const row=e.target.closest("[data-id]"); if(!row) return;
+    const f=e.target.dataset.f; if(!f) return;
+    const item=state[collection].find(x=>x.id===row.dataset.id); if(!item) return;
+    item[f]=numericFields.includes(f)?numOr0(e.target.value):e.target.value;
+    persist(); renderOutputs();
+    if(collection==="debts"||collection==="cards") refreshRowMeta(container,collection);
+  });
+  container.addEventListener("change",e=>{
+    const row=e.target.closest("[data-id]"); if(!row) return;
+    const item=state[collection].find(x=>x.id===row.dataset.id); const f=e.target.dataset.f;
+    if(item&&f&&e.target.tagName==="SELECT"){ item[f]=e.target.value; persist(); renderOutputs(); }
+  });
+  container.addEventListener("click",e=>{
+    if(!e.target.closest("[data-del]")) return;
+    const id=e.target.closest("[data-id]").dataset.id;
+    state[collection]=state[collection].filter(x=>x.id!==id);
+    persist(); renderFn(); renderOutputs();
+  });
+}
+function refreshRowMeta(container,collection){
+  container.querySelectorAll("[data-id]").forEach(row=>{
+    const item=state[collection].find(x=>x.id===row.dataset.id); if(!item) return;
+    const meta=row.querySelector(".rowmeta"); if(!meta) return;
+    if(collection==="debts"){
+      const po=payoff(item.outstanding,item.rate,item.emi);
+      meta.innerHTML=numOr0(item.rate)>0&&numOr0(item.outstanding)>0
+        ?(po&&po.impossible?`<b>EMI too low to ever clear this balance.</b>`
+          :po?`At this EMI: clears in ~${po.months} months, ~${inr(po.interest)} interest.`:``)
+        :`Add balance + rate to enable payoff planning.`;
+    } else {
+      const util=numOr0(item.limit)>0?numOr0(item.balance)/numOr0(item.limit)*100:0;
+      meta.innerHTML=numOr0(item.limit)>0
+        ?(util>30?`<b>Utilization ${util.toFixed(0)}% — above 30%.</b> Below ${inr(numOr0(item.limit)*0.3)} helps your score.`
+                 :`<span class="ok">Utilization ${util.toFixed(0)}% — healthy.</span>${item.due?` Due day ${esc(item.due)}.`:``}`)
+        :``;
+    }
+  });
+}
+
+/* add buttons */
+document.getElementById("addExp").onclick=()=>{ state.expenses.push({id:uid(),label:"",amount:0,kind:"essential"}); persist(); renderExpenses(); renderOutputs(); focusLast("expList"); };
+document.getElementById("addDebt").onclick=()=>{ state.debts.push({id:uid(),label:"",emi:0,outstanding:0,rate:0,dueDay:0}); persist(); renderDebts(); renderOutputs(); focusLast("debtList"); };
+document.getElementById("addCard").onclick=()=>{ state.cards.push({id:uid(),name:"",limit:0,balance:0,due:""}); persist(); renderCards(); renderOutputs(); focusLast("cardList"); };
+document.getElementById("addBill").onclick=()=>{ state.bills.push({id:uid(),label:"",amount:0,day:1,cat:"Utility"}); persist(); renderBills(); renderOutputs(); focusLast("billList"); };
+document.getElementById("addInv").onclick=()=>{ state.investments.push({id:uid(),label:"",type:"Equity/SIP",invested:0,current:0}); persist(); renderInvList(); renderOutputs(); focusLast("invList"); };
+function focusLast(id){ const rows=document.getElementById(id).querySelectorAll("[data-id]"); const last=rows[rows.length-1]; if(last){ const inp=last.querySelector("input"); if(inp) inp.focus(); } }
+
+/* top inputs */
+const incomeInput=document.getElementById("incomeInput");
+incomeInput.addEventListener("input",()=>{ state.income=numOr0(incomeInput.value); persist(); renderOutputs(); });
+document.getElementById("goalHouse").addEventListener("input",e=>{ state.goals.house=numOr0(e.target.value); persist(); renderOutputs(); });
+document.getElementById("goalEmerg").addEventListener("input",e=>{ state.goals.emergency=e.target.value.trim()===""?null:numOr0(e.target.value); persist(); renderOutputs(); });
+["sipAmt","sipYears","sipRate"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",e=>{
+    const k=id==="sipAmt"?"amt":(id==="sipYears"?"years":"rate");
+    state.sip[k]=numOr0(e.target.value); persist(); renderSip();
+  });
+});
+document.getElementById("payoffSel").addEventListener("change",computePayoff);
+document.getElementById("extraInput").addEventListener("input",computePayoff);
+
+/* tabs */
+let marketsLoaded=false;
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected","false"));
+    tab.setAttribute("aria-selected","true");
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    document.getElementById(tab.dataset.tab).classList.add("active");
+    window.scrollTo({top:0,behavior:"instant"});
+    if(tab.dataset.tab==="markets"&&!marketsLoaded){ marketsLoaded=true; loadMfData(); }
+  });
+});
+
+/* theme */
+function applyTheme(){
+  const t=state.settings.theme;
+  if(t) document.documentElement.setAttribute("data-theme",t);
+  else document.documentElement.setAttribute("data-theme",
+    window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+}
+document.getElementById("themeBtn").onclick=()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  state.settings.theme=cur==="dark"?"light":"dark";
+  applyTheme(); persist();
+};
+
+/* export / import */
+document.getElementById("exportBtn").onclick=()=>{
+  const slim={...state,mfWatch:state.mfWatch.map(({code,name})=>({code,name}))};
+  const blob=new Blob([JSON.stringify(slim,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="moneydesk-backup-"+new Date().toISOString().slice(0,10)+".json";
+  a.click(); URL.revokeObjectURL(a.href); toast("Backup downloaded");
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").addEventListener("change",e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+      const data=JSON.parse(r.result);
+      if(!data.expenses||!data.debts) throw new Error("bad");
+      state=migrate(data); persist(); boot(); toast("Data restored");
+    }catch(err){ toast("Couldn't read that file"); } };
+  r.readAsText(file); e.target.value="";
+});
+
+/* boot */
+function boot(){
+  applyTheme();
+  incomeInput.value=state.income||"";
+  document.getElementById("goalHouse").value=state.goals.house||"";
+  document.getElementById("goalEmerg").value=state.goals.emergency!=null?state.goals.emergency:"";
+  document.getElementById("goalInvest").value=state.goals.invest||"";
+  document.getElementById("sipAmt").value=state.sip.amt||"";
+  document.getElementById("sipYears").value=state.sip.years||"";
+  document.getElementById("sipRate").value=state.sip.rate||"";
+  renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
+  renderStocks(); renderMfWatch();
+  renderOutputs();
+  persist(); // store the auto-captured snapshot for this month
+}
+bindList("expList","expenses",renderExpenses,["amount"]);
+bindList("debtList","debts",renderDebts,["emi","rate","outstanding","dueDay"]);
+bindList("cardList","cards",renderCards,["limit","balance","due"]);
+bindList("billList","bills",renderBills,["amount","day"]);
+bindList("invList","investments",renderInvList,["invested","current"]);
+prunePaid();
+boot();
+</script>
+</body>
+</html>
