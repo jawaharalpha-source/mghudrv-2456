@@ -247,6 +247,9 @@
   /* net worth chart */
   .chart-wrap{width:100%; overflow:hidden;}
   .chart-wrap svg{display:block; width:100%; height:170px;}
+  .legend{display:flex; gap:16px; margin-bottom:8px; font-size:.74rem; color:var(--ink-muted);}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .legend i{width:10px; height:10px; border-radius:3px; display:inline-block;}
 
   /* markets */
   .mf-card{border:1px solid var(--rule); border-radius:12px; padding:13px 14px; margin-bottom:8px; background:var(--surface);}
@@ -315,6 +318,7 @@
   <button class="tab" data-tab="debt" role="tab" aria-selected="false">Debt</button>
   <button class="tab" data-tab="cards" role="tab" aria-selected="false">Cards &amp; Bills</button>
   <button class="tab" data-tab="invest" role="tab" aria-selected="false">Invest</button>
+  <button class="tab" data-tab="trends" role="tab" aria-selected="false">Trends</button>
   <button class="tab" data-tab="markets" role="tab" aria-selected="false">Markets</button>
   <button class="tab" data-tab="advice" role="tab" aria-selected="false">Advice</button>
 </nav>
@@ -491,6 +495,38 @@
     </div>
   </section>
 
+  <!-- TRENDS -->
+  <section class="view" id="trends" role="tabpanel">
+    <h2 class="sec serif">Trends</h2>
+    <p class="sub">Built from your monthly snapshots. Each chart answers one question — the story gets richer every month you use the app.</p>
+
+    <div class="card">
+      <h3>Am I living within my income?</h3>
+      <div class="hint">Income vs total outflow, month by month.</div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>Income</span><span><i style="background:var(--debt)"></i>Outflow</span></div>
+      <div class="chart-wrap" id="chIncome"></div>
+    </div>
+
+    <div class="card">
+      <h3>Is my debt actually falling?</h3>
+      <div class="hint">Outstanding loan balances at each month's snapshot.</div>
+      <div class="chart-wrap" id="chDebt"></div>
+    </div>
+
+    <div class="card">
+      <h3>What share of income am I saving?</h3>
+      <div class="hint">Surplus ÷ income each month. The 20% guideline is marked.</div>
+      <div class="chart-wrap" id="chSave"></div>
+    </div>
+
+    <div class="card">
+      <h3>Needs vs wants</h3>
+      <div class="hint">Essential vs discretionary spending (excluding EMIs), month by month.</div>
+      <div class="legend"><span><i style="background:var(--gold)"></i>Essential</span><span><i style="background:var(--plum)"></i>Discretionary</span></div>
+      <div class="chart-wrap" id="chSplit"></div>
+    </div>
+  </section>
+
   <!-- MARKETS -->
   <section class="view" id="markets" role="tabpanel">
     <h2 class="sec serif">Markets</h2>
@@ -591,17 +627,8 @@ function migrate(o){
 /* ---------- seed ---------- */
 function seed(){
   return {
-    income:0,
-    expenses:[],
-    debts:[],
-    cards:[],
-    investments:[],
-    bills:[],
-    paid:{},
-    history:[],
-    stocks:[],
-    mfWatch:[],
-    checklist:{},
+    income:0, expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
+    history:[], stocks:[], mfWatch:[], checklist:{},
     sip:{amt:0,years:5,rate:12},
     goals:{house:0,emergency:null,invest:0},
     settings:{theme:null}
@@ -733,6 +760,8 @@ function captureSnapshot(){
     invested:state.investments.reduce((a,i)=>a+numOr0(i.invested),0),
     portfolio:state.investments.reduce((a,i)=>a+numOr0(i.current),0),
     emergency:emergencyHave(), emTarget:emergencyTarget(),
+    essExp:state.expenses.filter(e=>e.kind==="essential").reduce((a,e)=>a+numOr0(e.amount),0),
+    discExp:discretionary(),
     debtOut:state.debts.reduce((a,d)=>a+numOr0(d.outstanding),0),
     cardDue:state.cards.reduce((a,c)=>a+numOr0(c.balance),0)
   };
@@ -814,7 +843,80 @@ function renderArchived(){
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Card dues</span><span class="bar-amt num">${v(snap&&snap.cardDue)}</span></div>`;
 }
 
-/* ---------- render outputs ---------- */
+/* ---------- trends charts (pure SVG, no libraries) ---------- */
+function chMonthLabels(hs,W,L,R,H){
+  return hs.map((h,i)=>{
+    if(hs.length>7&&i%2===1&&i!==hs.length-1) return "";
+    const [yy,mm]=h.month.split("-");
+    const x=hs.length===1?W/2:L+(W-L-R)*i/(hs.length-1);
+    return `<text x="${x}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${M_SHORT[+mm-1]} ${yy.slice(2)}</text>`;
+  }).join("");
+}
+function chEmpty(el,msg){ el.innerHTML=`<div class="empty" style="margin:0;">${msg}</div>`; }
+function chGroupedBars(el,hs,series){
+  // series: [{color, get(h)}]; skip months missing data
+  const rows=hs.filter(h=>series.every(s=>s.get(h)!==undefined));
+  if(rows.length<2){ chEmpty(el,"Needs at least two monthly snapshots — check back next month."); return; }
+  const W=600,H=170,L=8,R=8,T=12,B=22;
+  const maxV=Math.max(1,...rows.flatMap(h=>series.map(s=>s.get(h))));
+  const slot=(W-L-R)/rows.length;
+  const bw=Math.min(16,(slot-8)/series.length);
+  let bars="";
+  rows.forEach((h,i)=>{
+    const cx=L+slot*i+slot/2;
+    series.forEach((s,j)=>{
+      const v=s.get(h);
+      const bh=(H-T-B)*(v/maxV);
+      const x=cx-(bw*series.length)/2+j*bw;
+      bars+=`<rect x="${x.toFixed(1)}" y="${(H-B-bh).toFixed(1)}" width="${(bw-2).toFixed(1)}" height="${Math.max(bh,1).toFixed(1)}" rx="2" fill="${s.color}"/>`;
+    });
+  });
+  const labels=rows.map((h,i)=>{
+    if(rows.length>7&&i%2===1&&i!==rows.length-1) return "";
+    const [yy,mm]=h.month.split("-");
+    return `<text x="${L+slot*i+slot/2}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${M_SHORT[+mm-1]} ${yy.slice(2)}</text>`;
+  }).join("");
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}${labels}</svg>`;
+}
+function chLine(el,hs,get,color,opts){
+  opts=opts||{};
+  const rows=hs.filter(h=>get(h)!==undefined);
+  if(rows.length<2){ chEmpty(el,"Needs at least two monthly snapshots — check back next month."); return; }
+  const W=600,H=170,L=8,R=8,T=12,B=22;
+  const vals=rows.map(get);
+  let lo=opts.min!==undefined?opts.min:Math.min(...vals), hi=Math.max(...vals,opts.mark!==undefined?opts.mark:-Infinity);
+  if(lo===hi){ lo-=1; hi+=1; }
+  const pad=(hi-lo)*0.12; if(opts.min===undefined) lo-=pad; hi+=pad;
+  const x=i=>L+(W-L-R)*i/(rows.length-1);
+  const y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const pts=rows.map((h,i)=>x(i).toFixed(1)+","+y(get(h)).toFixed(1)).join(" ");
+  const dots=rows.map((h,i)=>`<circle cx="${x(i)}" cy="${y(get(h))}" r="3" fill="${color}"/>`).join("");
+  let mark="";
+  if(opts.mark!==undefined&&opts.mark>=lo&&opts.mark<=hi){
+    mark=`<line x1="${L}" y1="${y(opts.mark)}" x2="${W-R}" y2="${y(opts.mark)}" stroke="var(--ink-faint)" stroke-dasharray="4 4" stroke-width="1"/>
+      <text x="${W-R}" y="${y(opts.mark)-4}" font-size="9" text-anchor="end" fill="var(--ink-faint)">${opts.markLabel||""}</text>`;
+  }
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    ${mark}
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+    ${dots}${chMonthLabels(rows,W,L,R,H)}
+  </svg>`;
+}
+function renderTrends(){
+  const hs=sortedHistory();
+  const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  chGroupedBars(document.getElementById("chIncome"),hs,[
+    {color:css("--accent"),get:h=>h.income},
+    {color:css("--debt"),get:h=>h.outflow}
+  ]);
+  chLine(document.getElementById("chDebt"),hs,h=>h.debtOut,css("--debt"),{min:0});
+  chLine(document.getElementById("chSave"),hs,h=>(h.income>0&&h.surplus!==undefined)?+(h.surplus/h.income*100).toFixed(1):undefined,css("--accent"),{min:0,mark:20,markLabel:"20% guideline"});
+  chGroupedBars(document.getElementById("chSplit"),hs,[
+    {color:css("--gold"),get:h=>h.essExp},
+    {color:css("--plum"),get:h=>h.discExp}
+  ]);
+}
+
 function renderOutputs(){
   captureSnapshot();
   renderDashFilter();
@@ -841,7 +943,7 @@ function renderOutputs(){
 
   renderDebtStrategy(); renderPayoffSelect(); computePayoff();
   renderCardsSummary(); renderBillsUpcoming();
-  renderInvest(); renderSip(); renderNWHistory();
+  renderInvest(); renderSip(); renderNWHistory(); renderTrends();
   renderReco(); renderAdvice();
 }
 function renderLiveDash(){
