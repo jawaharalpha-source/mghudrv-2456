@@ -172,6 +172,9 @@
     .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch{grid-template-columns:1fr 1fr; row-gap:8px;}
     .row .del{grid-column:2; justify-self:end;}
     .row .fld-wide{grid-column:1/-1;}
+    .row.debt .fld-wide{grid-column:1/-1;}
+    .row.debt .del{grid-column:2; grid-row:1; align-self:start; justify-self:end;}
+    .row.debt .fld-wide input{width:calc(100% - 40px);}
   }
   .fld{display:flex; flex-direction:column; gap:3px; min-width:0;}
   .fld label{font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint);}
