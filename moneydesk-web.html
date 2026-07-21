@@ -161,7 +161,9 @@
     padding:10px 10px 10px 12px; margin-bottom:8px;
   }
   .row.exp{grid-template-columns:1fr 96px 116px 30px;}
-  .row.debt{grid-template-columns:1fr 76px 58px 78px 62px 30px;}
+  .row.debt{grid-template-columns:1fr 1fr 1fr 34px;}
+  .row.debt .fld-wide{grid-column:1/4;}
+  .row.debt .del{grid-column:4; grid-row:1; align-self:start;}
   .row.ccard{grid-template-columns:1fr 92px 92px 96px 30px;}
   .row.inv{grid-template-columns:1fr 108px 96px 96px 30px;}
   .row.bill{grid-template-columns:1fr 88px 68px 104px 30px;}
@@ -639,7 +641,7 @@ function migrate(o){
   o.sip=o.sip||{amt:0,years:5,rate:12};
   o.paid=o.paid||{};
   o.bills.forEach(b=>{ if(!b.cat) b.cat="Other"; });
-  o.debts.forEach(d=>{ if(d.dueDay===undefined) d.dueDay=0; });
+  o.debts.forEach(d=>{ if(d.dueDay===undefined) d.dueDay=0; if(d.origAmt===undefined) d.origAmt=0; if(d.emisLeft===undefined) d.emisLeft=0; });
   o.goals=o.goals||{house:0,emergency:null};
   if(o.goals.invest===undefined) o.goals.invest=0;
   if(!o.incomes){
@@ -1448,25 +1450,41 @@ function renderExpenses(){
       <button class="del" data-del title="Remove">×</button>
     </div>`).join("");
 }
+function debtMeta(d){
+  const orig=numOr0(d.origAmt), bal=numOr0(d.outstanding), bank=Math.round(numOr0(d.emisLeft));
+  const po=payoff(d.outstanding,d.rate,d.emi);
+  const bits=[]; let bar="";
+  if(orig>0&&orig>=bal&&bal>0){
+    const pct=Math.min((1-bal/orig)*100,100);
+    bar=`<div class="bar-track" style="margin:4px 0 7px;"><div class="bar-fill" style="width:${pct.toFixed(1)}%"></div></div>`;
+    bits.push(`<span class="ok">${pct.toFixed(0)}% repaid</span> of ${inr(orig)} original`);
+  }
+  if(bank>0) bits.push(`bank schedule: <b style="color:var(--ink)">${bank} EMIs left</b>`);
+  if(numOr0(d.rate)>0&&bal>0){
+    if(po&&po.impossible) bits.push(`<b>EMI too low to ever clear this balance.</b>`);
+    else if(po){
+      bits.push(`maths at this EMI: ~${po.months} mo, ~${inr(po.interest)} interest`);
+      if(bank>0&&Math.abs(po.months-bank)>2) bits.push(`<b>maths differs from bank by ${Math.abs(po.months-bank)} mo — recheck rate or EMI</b>`);
+    }
+  } else if(bal>0&&bank===0) bits.push(`add rate to enable payoff maths`);
+  if(!bits.length&&!bar) return `Add balance + rate to enable payoff planning.`;
+  return bar+bits.join(" · ");
+}
 function renderDebts(){
   const wrap=document.getElementById("debtList");
   if(!state.debts.length){ wrap.innerHTML=`<div class="empty">No loans yet.</div>`; return; }
-  wrap.innerHTML=state.debts.map(d=>{
-    const po=payoff(d.outstanding,d.rate,d.emi);
-    const meta=numOr0(d.rate)>0&&numOr0(d.outstanding)>0
-      ?(po&&po.impossible?`<div class="rowmeta"><b>EMI too low to ever clear this balance.</b></div>`
-        :po?`<div class="rowmeta">At this EMI: clears in ~${po.months} months, ~${inr(po.interest)} interest.</div>`:``)
-      :`<div class="rowmeta">Add balance + rate to enable payoff planning.</div>`;
-    return `<div class="row debt" data-id="${d.id}">
+  wrap.innerHTML=state.debts.map(d=>`
+    <div class="row debt" data-id="${d.id}">
       <div class="fld fld-wide"><label>Loan</label><input data-f="label" value="${esc(d.label)}" placeholder="e.g. Car loan"></div>
+      <button class="del" data-del title="Remove">×</button>
       <div class="fld"><label>EMI / mo</label><input data-f="emi" class="num" inputmode="numeric" value="${d.emi||""}" placeholder="0"></div>
       <div class="fld"><label>Rate %</label><input data-f="rate" class="num" inputmode="decimal" value="${d.rate||""}" placeholder="0"></div>
-      <div class="fld"><label>Balance</label><input data-f="outstanding" class="num" inputmode="numeric" value="${d.outstanding||""}" placeholder="0"></div>
+      <div class="fld"><label>Balance now</label><input data-f="outstanding" class="num" inputmode="numeric" value="${d.outstanding||""}" placeholder="0"></div>
+      <div class="fld"><label>Original amount</label><input data-f="origAmt" class="num" inputmode="numeric" value="${d.origAmt||""}" placeholder="0"></div>
+      <div class="fld"><label>EMIs left (bank)</label><input data-f="emisLeft" class="num" inputmode="numeric" value="${d.emisLeft||""}" placeholder="—"></div>
       <div class="fld"><label>Due day</label><input data-f="dueDay" class="num" inputmode="numeric" value="${d.dueDay||""}" placeholder="—"></div>
-      <button class="del" data-del title="Remove">×</button>
-      ${meta}
-    </div>`;
-  }).join("");
+      <div class="rowmeta">${debtMeta(d)}</div>
+    </div>`).join("");
 }
 function renderCards(){
   const wrap=document.getElementById("cardList");
@@ -1546,11 +1564,7 @@ function refreshRowMeta(container,collection){
     const item=state[collection].find(x=>x.id===row.dataset.id); if(!item) return;
     const meta=row.querySelector(".rowmeta"); if(!meta) return;
     if(collection==="debts"){
-      const po=payoff(item.outstanding,item.rate,item.emi);
-      meta.innerHTML=numOr0(item.rate)>0&&numOr0(item.outstanding)>0
-        ?(po&&po.impossible?`<b>EMI too low to ever clear this balance.</b>`
-          :po?`At this EMI: clears in ~${po.months} months, ~${inr(po.interest)} interest.`:``)
-        :`Add balance + rate to enable payoff planning.`;
+      meta.innerHTML=debtMeta(item);
     } else {
       const util=numOr0(item.limit)>0?numOr0(item.balance)/numOr0(item.limit)*100:0;
       meta.innerHTML=numOr0(item.limit)>0
@@ -1564,7 +1578,7 @@ function refreshRowMeta(container,collection){
 /* add buttons */
 document.getElementById("addInc").onclick=()=>{ state.incomes.push({id:uid(),label:"",amount:0,kind:"fixed"}); persist(); renderIncomes(); renderOutputs(); focusLast("incList"); };
 document.getElementById("addExp").onclick=()=>{ state.expenses.push({id:uid(),label:"",amount:0,kind:"essential"}); persist(); renderExpenses(); renderOutputs(); focusLast("expList"); };
-document.getElementById("addDebt").onclick=()=>{ state.debts.push({id:uid(),label:"",emi:0,outstanding:0,rate:0,dueDay:0}); persist(); renderDebts(); renderOutputs(); focusLast("debtList"); };
+document.getElementById("addDebt").onclick=()=>{ state.debts.push({id:uid(),label:"",emi:0,outstanding:0,rate:0,dueDay:0,origAmt:0,emisLeft:0}); persist(); renderDebts(); renderOutputs(); focusLast("debtList"); };
 document.getElementById("addCard").onclick=()=>{ state.cards.push({id:uid(),name:"",limit:0,balance:0,due:""}); persist(); renderCards(); renderOutputs(); focusLast("cardList"); };
 document.getElementById("addBill").onclick=()=>{ state.bills.push({id:uid(),label:"",amount:0,day:1,cat:"Utility"}); persist(); renderBills(); renderOutputs(); focusLast("billList"); };
 document.getElementById("addInv").onclick=()=>{ state.investments.push({id:uid(),label:"",type:"Equity/SIP",invested:0,current:0}); persist(); renderInvList(); renderOutputs(); focusLast("invList"); };
@@ -1645,7 +1659,7 @@ function boot(){
 }
 bindList("incList","incomes",renderIncomes,["amount"]);
 bindList("expList","expenses",renderExpenses,["amount"]);
-bindList("debtList","debts",renderDebts,["emi","rate","outstanding","dueDay"]);
+bindList("debtList","debts",renderDebts,["emi","rate","outstanding","dueDay","origAmt","emisLeft"]);
 bindList("cardList","cards",renderCards,["limit","balance","due"]);
 bindList("billList","bills",renderBills,["amount","day"]);
 bindList("invList","investments",renderInvList,["invested","current"]);
