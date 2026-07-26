@@ -168,8 +168,13 @@
   .row.inv{grid-template-columns:1fr 108px 96px 96px 30px;}
   .row.bill{grid-template-columns:1fr 88px 68px 104px 30px;}
   .row.watch{grid-template-columns:1fr 110px 30px;}
+  .row.owe{grid-template-columns:1fr 92px 130px 64px 30px;}
+  .row.owe .chk{display:flex; flex-direction:column; gap:3px; align-items:center;}
+  .row.owe .chk label{font-size:.6rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-faint);}
+  .row.owe .chk input{width:20px; height:20px; accent-color:var(--accent); cursor:pointer;}
+  .row.owe.done input[data-f="label"],.row.owe.done input[data-f="amount"]{text-decoration:line-through; color:var(--ink-faint);}
   @media (max-width:560px){
-    .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch{grid-template-columns:1fr 1fr; row-gap:8px;}
+    .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch,.row.owe{grid-template-columns:1fr 1fr; row-gap:8px;}
     .row .del{grid-column:2; justify-self:end;}
     .row .fld-wide{grid-column:1/-1;}
     .row.debt .fld-wide{grid-column:1/-1;}
@@ -300,6 +305,31 @@
   .adv-t{font-size:.87rem; font-weight:600; margin:0 0 2px;}
   .adv-d{font-size:.8rem; color:var(--ink-muted); margin:0;}
 
+  /* app lock */
+  .lockscreen{
+    position:fixed; inset:0; z-index:100; background:var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .lockcard{
+    width:100%; max-width:320px; text-align:center;
+    background:var(--surface); border:1px solid var(--rule); border-radius:18px;
+    padding:28px 22px; box-shadow:var(--shadow-lg);
+  }
+  .lockcard .glyph{
+    width:56px; height:56px; margin:0 auto 14px; border-radius:16px;
+    background:linear-gradient(135deg,var(--hero1),var(--hero2));
+    display:grid; place-items:center; color:#fff; font-size:1.5rem; font-family:Georgia,serif;
+  }
+  .lockcard h3{margin:0 0 4px; font-size:1.05rem;}
+  .lockcard p{margin:0 0 16px; font-size:.8rem; color:var(--ink-muted);}
+  .lockcard input{
+    width:100%; text-align:center; letter-spacing:.4em; font-size:1.3rem;
+    border:1px solid var(--rule); background:var(--bg); color:var(--ink);
+    border-radius:10px; padding:10px; font-family:ui-monospace,monospace; margin-bottom:12px;
+  }
+  .lockcard input:focus{outline:2px solid var(--accent); outline-offset:-1px;}
+  .lockcard .err{color:var(--warn); font-size:.78rem; min-height:1.2em; margin:0 0 8px;}
+  .lockcard .fine{font-size:.68rem; color:var(--ink-faint); margin-top:14px;}
   footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--rule); font-size:.72rem; color:var(--ink-faint);}
   .toast{
     position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px);
@@ -316,6 +346,7 @@
     <span class="mark serif">Money<b>Desk</b></span>
     <span class="tag">personal</span>
   </div>
+  <button class="iconbtn" id="lockBtn" title="App lock (PIN)" aria-label="App lock">🔒</button>
   <button class="iconbtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
   <button class="iconbtn" id="exportBtn" title="Back up data to a file" aria-label="Export">↓</button>
   <button class="iconbtn" id="importBtn" title="Restore data from a file" aria-label="Import">↑</button>
@@ -351,7 +382,7 @@
     <div class="hero">
       <p class="l" id="heroLabel">Net worth</p>
       <p class="v num" id="heroNW">₹0</p>
-      <div class="hero-sub"><span class="delta" id="heroDelta" hidden></span><span class="hero-note" id="heroNote">bank cash + investments − loans − card dues</span></div>
+      <div class="hero-sub"><span class="delta" id="heroDelta" hidden></span><span class="hero-note" id="heroNote">bank cash + investments + owed to you − loans − cards</span></div>
     </div>
 
     <div class="live-only">
@@ -414,6 +445,15 @@
     </div>
     <div class="card">
       <p class="hint" style="margin:0;" id="incAdviceNote"></p>
+    </div>
+
+    <div class="eyebrow">Money owed to you</div>
+    <p class="sub">Track loans you've given to friends and family. Tick the box when returned — the amount is added to your bank balance automatically.</p>
+    <div id="oweList"></div>
+    <div class="btn-row"><button class="btn ghost sm" id="addOwe">+ Add entry</button></div>
+    <div class="card" style="margin-top:16px;">
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Still outstanding</span><span></span><span class="bar-amt num" id="oweOut" style="font-weight:700; color:var(--gold);">₹0</span></div>
+      <div class="bar-row" style="border:none;"><span class="bar-label" style="color:var(--ink-muted)">Returned till date</span><span></span><span class="bar-amt num" id="oweBack">₹0</span></div>
     </div>
   </section>
 
@@ -630,6 +670,17 @@
 
 </div>
 
+<div class="lockscreen" id="lockScreen" hidden>
+  <div class="lockcard">
+    <div class="glyph">₹</div>
+    <h3 id="lockTitle">Enter PIN</h3>
+    <p id="lockSub">Unlock MoneyDesk</p>
+    <input id="lockInput" inputmode="numeric" type="password" maxlength="8" autocomplete="off">
+    <p class="err" id="lockErr"></p>
+    <button class="btn" id="lockGo" style="width:100%;">Unlock</button>
+    <p class="fine" id="lockFine">Forgot the PIN? Clearing Safari website data for this site removes the lock — and all app data with it, so keep backups.</p>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -654,6 +705,7 @@ function migrate(o){
   o.goals=o.goals||{house:0,emergency:null};
   if(o.goals.invest===undefined) o.goals.invest=0;
   if(o.bankCash===undefined) o.bankCash=0;
+  o.receivables=o.receivables||[];
   if(!o.incomes){
     const inc=Number(o.income)||0;
     o.incomes = inc>0 ? [{id:uid(),label:"Salary",amount:inc,kind:"fixed"}] : [];
@@ -664,7 +716,7 @@ function migrate(o){
 /* ---------- seed ---------- */
 function seed(){
   return {
-    income:0, bankCash:0, incomes:[], expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
+    income:0, bankCash:0, receivables:[], incomes:[], expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
     history:[], stocks:[], mfWatch:[], checklist:{},
     sip:{amt:0,years:5,rate:12},
     goals:{house:0,emergency:null,invest:0},
@@ -703,8 +755,9 @@ function surplus(){ return totalIncome()-outflow(); }
 function dti(){ const i=totalIncome(); return i>0?totalEmi()/i*100:0; }
 function emergencyTarget(){ return state.goals.emergency!=null?numOr0(state.goals.emergency):Math.round(essential()*3); }
 function emergencyHave(){ return state.investments.filter(i=>i.type==="Emergency").reduce((a,i)=>a+numOr0(i.current),0); }
+function owedToMe(){ return state.receivables.filter(r=>!r.returned).reduce((a,r)=>a+numOr0(r.amount),0); }
 function netWorth(){
-  const inv=numOr0(state.bankCash)+state.investments.reduce((a,i)=>a+numOr0(i.current),0);
+  const inv=numOr0(state.bankCash)+owedToMe()+state.investments.reduce((a,i)=>a+numOr0(i.current),0);
   const debt=state.debts.reduce((a,d)=>a+numOr0(d.outstanding),0);
   const cardDue=state.cards.reduce((a,c)=>a+numOr0(c.balance),0);
   return inv-debt-cardDue;
@@ -798,7 +851,7 @@ function captureSnapshot(){
     income:totalIncome(), fixedInc:fixedIncome(), outflow:outflow(), surplus:surplus(), dti:+dti().toFixed(1),
     invested:state.investments.reduce((a,i)=>a+numOr0(i.invested),0),
     portfolio:state.investments.reduce((a,i)=>a+numOr0(i.current),0),
-    emergency:emergencyHave(), emTarget:emergencyTarget(), bankCash:numOr0(state.bankCash),
+    emergency:emergencyHave(), emTarget:emergencyTarget(), bankCash:numOr0(state.bankCash), owedToMe:owedToMe(),
     essExp:state.expenses.filter(e=>e.kind==="essential").reduce((a,e)=>a+numOr0(e.amount),0),
     discExp:discretionary(),
     debtOut:state.debts.reduce((a,d)=>a+numOr0(d.outstanding),0),
@@ -878,6 +931,7 @@ function renderArchived(){
   document.getElementById("archDetailsBody").innerHTML=`
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Take-home that month</span><span class="bar-amt num">${v(snap&&snap.income)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Cash in bank</span><span class="bar-amt num">${v(snap&&snap.bankCash)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Owed to you</span><span class="bar-amt num">${v(snap&&snap.owedToMe)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Portfolio value</span><span class="bar-amt num">${v(snap&&snap.portfolio)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Emergency fund</span><span class="bar-amt num">${v(snap&&snap.emergency)}${snap&&snap.emTarget?` <span class="pct">/ ${inrShort(snap.emTarget)} target</span>`:""}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Loan balances</span><span class="bar-amt num">${v(snap&&snap.debtOut)}</span></div>
@@ -984,7 +1038,7 @@ function renderOutputs(){
 
   renderDebtStrategy(); renderPayoffSelect(); computePayoff();
   renderCardsSummary(); renderBillsUpcoming();
-  renderIncomeSummary();
+  renderIncomeSummary(); renderOwedSummary();
   renderInvest(); renderSip(); renderNWHistory(); renderTrends();
   renderReco(); renderAdvice();
 }
@@ -1003,7 +1057,7 @@ function renderLiveDash(){
   const nw=netWorth();
   document.getElementById("heroLabel").textContent="Net worth";
   document.getElementById("heroNW").textContent=inr(nw);
-  document.getElementById("heroNote").textContent="bank cash + investments − loans − card dues";
+  document.getElementById("heroNote").textContent="bank cash + investments + owed to you − loans − cards";
   heroDelta(monthKey(), nw);
   renderTargets();
 
@@ -1559,6 +1613,73 @@ function renderInvList(){
     </div>`).join("");
 }
 
+/* receivables: money owed to you */
+function oweMeta(r){
+  if(r.returned) return `<span class="ok">Returned${r.returnedAt?" on "+new Date(r.returnedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):""}</span> · added to bank balance`;
+  if(!r.due) return `No return date set.`;
+  const d=new Date(r.due+"T23:59:59");
+  if(isNaN(d)) return ``;
+  const days=Math.ceil((d-new Date())/86400000);
+  if(days<0) return `<b>Overdue by ${-days} day${days===-1?"":"s"}</b> — a gentle reminder might be due.`;
+  if(days===0) return `Due back <b style="color:var(--ink)">today</b>.`;
+  return `Due back in ${days} day${days===1?"":"s"}.`;
+}
+function renderOwed(){
+  const wrap=document.getElementById("oweList");
+  if(!state.receivables.length){ wrap.innerHTML=`<div class="empty">Nothing lent out right now.</div>`; return; }
+  const sorted=[...state.receivables].sort((a,b)=>(a.returned-b.returned));
+  wrap.innerHTML=sorted.map(r=>`
+    <div class="row owe ${r.returned?"done":""}" data-id="${r.id}">
+      <div class="fld fld-wide"><label>Who</label><input data-f="label" value="${esc(r.label)}" placeholder="e.g. Rahul" ${r.returned?"readonly":""}></div>
+      <div class="fld"><label>₹ amount</label><input data-f="amount" class="num" inputmode="numeric" value="${r.amount||""}" placeholder="0" ${r.returned?"readonly":""}></div>
+      <div class="fld"><label>Expected back</label><input data-f="due" type="date" value="${esc(r.due||"")}" ${r.returned?"disabled":""}></div>
+      <div class="chk"><label>Returned</label><input type="checkbox" data-f="returned" ${r.returned?"checked":""}></div>
+      <button class="del" data-del title="Remove">×</button>
+      <div class="rowmeta">${oweMeta(r)}</div>
+    </div>`).join("");
+}
+function renderOwedSummary(){
+  document.getElementById("oweOut").textContent=inr(owedToMe());
+  document.getElementById("oweBack").textContent=inr(state.receivables.filter(r=>r.returned).reduce((a,r)=>a+numOr0(r.amount),0));
+}
+document.getElementById("addOwe").addEventListener("click",()=>{
+  state.receivables.push({id:uid(),label:"",amount:0,due:"",returned:false});
+  persist(); renderOwed(); renderOutputs(); focusLast("oweList");
+});
+document.getElementById("oweList").addEventListener("input",e=>{
+  const row=e.target.closest("[data-id]"); if(!row) return;
+  const r=state.receivables.find(x=>x.id===row.dataset.id); const f=e.target.dataset.f;
+  if(!r||!f||e.target.type==="checkbox") return;
+  r[f]=(f==="amount")?numOr0(e.target.value):e.target.value;
+  persist(); renderOutputs();
+  const meta=row.querySelector(".rowmeta"); if(meta) meta.innerHTML=oweMeta(r);
+});
+document.getElementById("oweList").addEventListener("change",e=>{
+  if(e.target.type!=="checkbox") return;
+  const row=e.target.closest("[data-id]"); if(!row) return;
+  const r=state.receivables.find(x=>x.id===row.dataset.id); if(!r) return;
+  const amt=numOr0(r.amount);
+  if(e.target.checked && !r.returned){
+    r.returned=true; r.returnedAt=new Date().toISOString().slice(0,10);
+    state.bankCash=numOr0(state.bankCash)+amt;
+    toast(inr(amt)+" added to bank balance");
+  } else if(!e.target.checked && r.returned){
+    r.returned=false; delete r.returnedAt;
+    state.bankCash=numOr0(state.bankCash)-amt;
+    toast(inr(amt)+" removed from bank balance");
+  }
+  document.getElementById("bankCash").value=state.bankCash||"";
+  persist(); renderOwed(); renderOutputs();
+});
+document.getElementById("oweList").addEventListener("click",e=>{
+  if(!e.target.closest("[data-del]")) return;
+  const id=e.target.closest("[data-id]").dataset.id;
+  const r=state.receivables.find(x=>x.id===id);
+  if(r&&!r.returned&&numOr0(r.amount)>0&&!confirm("This entry is still outstanding. Remove it anyway?")) return;
+  state.receivables=state.receivables.filter(x=>x.id!==id);
+  persist(); renderOwed(); renderOutputs();
+});
+
 /* delegation binder */
 function bindList(containerId,collection,renderFn,numericFields){
   const container=document.getElementById(containerId);
@@ -1676,7 +1797,7 @@ function boot(){
   document.getElementById("sipAmt").value=state.sip.amt||"";
   document.getElementById("sipYears").value=state.sip.years||"";
   document.getElementById("sipRate").value=state.sip.rate||"";
-  renderIncomes(); renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
+  renderIncomes(); renderOwed(); renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
   renderStocks(); renderMfWatch();
   renderOutputs();
   persist(); // store the auto-captured snapshot for this month
@@ -1689,6 +1810,70 @@ bindList("billList","bills",renderBills,["amount","day"]);
 bindList("invList","investments",renderInvList,["invested","current"]);
 prunePaid();
 boot();
+/* ---------- app lock (PIN privacy screen) ---------- */
+async function pinHash(pin){
+  try{
+    if(crypto&&crypto.subtle){
+      const buf=await crypto.subtle.digest("SHA-256", new TextEncoder().encode("moneydesk:"+pin));
+      return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+  }catch(e){}
+  let h=5381; const str="moneydesk:"+pin;
+  for(let i=0;i<str.length;i++) h=((h<<5)+h+str.charCodeAt(i))|0;
+  return "f"+(h>>>0).toString(16);
+}
+const lockEls={
+  screen:document.getElementById("lockScreen"), title:document.getElementById("lockTitle"),
+  sub:document.getElementById("lockSub"), input:document.getElementById("lockInput"),
+  err:document.getElementById("lockErr"), go:document.getElementById("lockGo"),
+  fine:document.getElementById("lockFine")
+};
+let lockMode="unlock", pinFirst="";
+function showLock(mode, title, sub, btn){
+  lockMode=mode; lockEls.title.textContent=title; lockEls.sub.textContent=sub;
+  lockEls.go.textContent=btn; lockEls.err.textContent=""; lockEls.input.value="";
+  lockEls.fine.hidden=(mode!=="unlock");
+  lockEls.screen.hidden=false;
+  setTimeout(()=>lockEls.input.focus(),50);
+}
+function hideLock(){ lockEls.screen.hidden=true; }
+async function lockSubmit(){
+  const val=lockEls.input.value.trim();
+  if(val.length<4){ lockEls.err.textContent="Use at least 4 digits."; return; }
+  const h=await pinHash(val);
+  if(lockMode==="unlock"){
+    if(h===state.settings.pinHash) hideLock();
+    else { lockEls.err.textContent="Wrong PIN — try again."; lockEls.input.value=""; }
+  } else if(lockMode==="verify"){
+    if(h===state.settings.pinHash){
+      hideLock();
+      const change=confirm("PIN verified. OK = change PIN, Cancel = remove lock.");
+      if(change) showLock("set1","Set new PIN","Choose 4–8 digits","Next");
+      else { delete state.settings.pinHash; persist(); toast("App lock removed"); }
+    } else { lockEls.err.textContent="Wrong PIN — try again."; lockEls.input.value=""; }
+  } else if(lockMode==="set1"){
+    pinFirst=val;
+    showLock("set2","Confirm PIN","Type the same PIN again","Set PIN");
+  } else if(lockMode==="set2"){
+    if(val!==pinFirst){ showLock("set1","Set new PIN","PINs didn't match — start over","Next"); return; }
+    state.settings.pinHash=await pinHash(val); persist();
+    hideLock(); toast("App lock is on");
+  }
+}
+lockEls.go.addEventListener("click",lockSubmit);
+lockEls.input.addEventListener("keydown",e=>{ if(e.key==="Enter") lockSubmit(); });
+document.getElementById("lockBtn").addEventListener("click",()=>{
+  if(state.settings.pinHash) showLock("verify","Enter current PIN","To change or remove the lock","Verify");
+  else showLock("set1","Set a PIN","Locks the app on open and after 3 min in background","Next");
+});
+if(state.settings.pinHash) showLock("unlock","Enter PIN","Unlock MoneyDesk","Unlock");
+let hiddenAt=0;
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden) hiddenAt=Date.now();
+  else if(state.settings.pinHash && hiddenAt && Date.now()-hiddenAt>180000)
+    showLock("unlock","Enter PIN","Unlock MoneyDesk","Unlock");
+});
+
 /* offline support: cache the app on-device after first online open (hosted version only) */
 if("serviceWorker" in navigator && location.protocol==="https:"){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
