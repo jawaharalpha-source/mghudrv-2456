@@ -769,6 +769,7 @@ function migrate(o){
   if(o.bankCash===undefined) o.bankCash=0;
   o.receivables=o.receivables||[];
   o.trips=o.trips||[];
+  if(!o.curMonth) o.curMonth=monthKey();
   if(!o.incomes){
     const inc=Number(o.income)||0;
     o.incomes = inc>0 ? [{id:uid(),label:"Salary",amount:inc,kind:"fixed"}] : [];
@@ -907,6 +908,21 @@ document.addEventListener("click",e=>{
 let viewing=null; // null = live; else "YYYY-MM"
 const M_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const M_LONG=["January","February","March","April","May","June","July","August","September","October","November","December"];
+function checkMonthRollover(){
+  const mk=monthKey();
+  if(state.curMonth===mk) return;
+  // archive the outgoing month's actual line items into its snapshot
+  const prev=state.history.find(h=>h.month===state.curMonth);
+  if(prev){
+    prev.items={
+      incomes:state.incomes.map(i=>({label:i.label,amount:numOr0(i.amount),kind:i.kind})),
+      expenses:state.expenses.map(e=>({label:e.label,amount:numOr0(e.amount),kind:e.kind}))
+    };
+  }
+  state.curMonth=mk;
+  persist();
+  setTimeout(()=>toast("New month! Entries carried over — update anything that changed."),600);
+}
 function captureSnapshot(){
   const mk=monthKey();
   const snap={
@@ -998,7 +1014,12 @@ function renderArchived(){
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Portfolio value</span><span class="bar-amt num">${v(snap&&snap.portfolio)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Emergency fund</span><span class="bar-amt num">${v(snap&&snap.emergency)}${snap&&snap.emTarget?` <span class="pct">/ ${inrShort(snap.emTarget)} target</span>`:""}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Loan balances</span><span class="bar-amt num">${v(snap&&snap.debtOut)}</span></div>
-    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Card dues</span><span class="bar-amt num">${v(snap&&snap.cardDue)}</span></div>`;
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Card dues</span><span class="bar-amt num">${v(snap&&snap.cardDue)}</span></div>`
+    +(snap&&snap.items?`
+    <div class="eyebrow" style="margin-top:18px;">Income entries that month</div>
+    ${snap.items.incomes.filter(i=>i.label).map(i=>`<div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">${esc(i.label)} <span class="pct">(${i.kind})</span></span><span class="bar-amt num">${inr(i.amount)}</span></div>`).join("")||`<div class="empty">None recorded.</div>`}
+    <div class="eyebrow" style="margin-top:18px;">Expense entries that month</div>
+    ${snap.items.expenses.filter(e=>e.label).map(e=>`<div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">${esc(e.label)} <span class="pct">(${e.kind})</span></span><span class="bar-amt num">${inr(e.amount)}</span></div>`).join("")||`<div class="empty">None recorded.</div>`}`:``);
 }
 
 /* ---------- trends charts (pure SVG, no libraries) ---------- */
@@ -2011,6 +2032,7 @@ document.getElementById("importFile").addEventListener("change",e=>{
 
 /* boot */
 function boot(){
+  checkMonthRollover();
   applyTheme();
   document.getElementById("bankCash").value=state.bankCash||"";
   document.getElementById("goalHouse").value=state.goals.house||"";
@@ -2091,6 +2113,7 @@ document.getElementById("lockBtn").addEventListener("click",()=>{
 if(state.settings.pinHash) showLock("unlock","Enter PIN","Unlock MoneyDesk","Unlock");
 let hiddenAt=0;
 document.addEventListener("visibilitychange",()=>{
+  if(!document.hidden){ checkMonthRollover(); renderOutputs(); }
   if(document.hidden) hiddenAt=Date.now();
   else if(state.settings.pinHash && hiddenAt && Date.now()-hiddenAt>180000)
     showLock("unlock","Enter PIN","Unlock MoneyDesk","Unlock");
