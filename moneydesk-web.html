@@ -174,7 +174,7 @@
   .row.owe .chk input{width:20px; height:20px; accent-color:var(--accent); cursor:pointer;}
   .row.owe.done input[data-f="label"],.row.owe.done input[data-f="amount"]{text-decoration:line-through; color:var(--ink-faint);}
   @media (max-width:560px){
-    .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch,.row.owe{grid-template-columns:1fr 1fr; row-gap:8px;}
+    .row.exp,.row.debt,.row.ccard,.row.inv,.row.bill,.row.watch,.row.owe,.row.texp{grid-template-columns:1fr 1fr; row-gap:8px;}
     .row .del{grid-column:2; justify-self:end;}
     .row .fld-wide{grid-column:1/-1;}
     .row.debt .fld-wide{grid-column:1/-1;}
@@ -305,6 +305,29 @@
   .adv-t{font-size:.87rem; font-weight:600; margin:0 0 2px;}
   .adv-d{font-size:.8rem; color:var(--ink-muted); margin:0;}
 
+  /* trips */
+  .trip-card{
+    display:block; width:100%; text-align:left; cursor:pointer; font-family:inherit;
+    background:var(--surface); border:1px solid var(--rule); border-radius:14px;
+    padding:15px 16px; margin-bottom:10px; box-shadow:var(--shadow); color:var(--ink);
+  }
+  .trip-card:hover{border-color:var(--accent);}
+  .trip-card .tname{font-size:1rem; font-weight:700; margin:0 0 2px;}
+  .trip-card .tmeta{font-size:.76rem; color:var(--ink-muted); margin:0 0 8px;}
+  .trip-card .tspend{font-size:1.15rem; font-weight:700; color:var(--gold);}
+  .backbtn{
+    appearance:none; border:none; background:none; cursor:pointer; font-family:inherit;
+    color:var(--accent); font-size:.86rem; font-weight:700; padding:0; margin-bottom:14px;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .donut-wrap{display:flex; gap:18px; align-items:center; flex-wrap:wrap;}
+  .donut-wrap svg{width:140px; height:140px; flex-shrink:0;}
+  .donut-legend{flex:1; min-width:180px;}
+  .dleg{display:flex; align-items:center; gap:8px; font-size:.8rem; padding:4px 0;}
+  .dleg i{width:11px; height:11px; border-radius:3px; flex-shrink:0;}
+  .dleg .amt{margin-left:auto; font-weight:600;}
+  .dleg .pc{color:var(--ink-faint); font-size:.72rem; width:38px; text-align:right;}
+  .row.texp{grid-template-columns:1fr 86px 112px 122px 30px;}
   /* app lock */
   .lockscreen{
     position:fixed; inset:0; z-index:100; background:var(--bg);
@@ -361,6 +384,7 @@
   <button class="tab" data-tab="cards" role="tab" aria-selected="false">Cards &amp; Bills</button>
   <button class="tab" data-tab="invest" role="tab" aria-selected="false">Invest</button>
   <button class="tab" data-tab="trends" role="tab" aria-selected="false">Trends</button>
+  <button class="tab" data-tab="trips" role="tab" aria-selected="false">Trips</button>
   <button class="tab" data-tab="markets" role="tab" aria-selected="false">Markets</button>
   <button class="tab" data-tab="advice" role="tab" aria-selected="false">Advice</button>
 </nav>
@@ -599,6 +623,44 @@
     </div>
   </section>
 
+  <!-- TRIPS -->
+  <section class="view" id="trips" role="tabpanel">
+    <div id="tripListView">
+      <h2 class="sec serif">Trips</h2>
+      <p class="sub">A separate space for travel spending — trip expenses stay out of your monthly budget maths. Tap a trip to open it.</p>
+      <div id="tripList"></div>
+      <div class="btn-row"><button class="btn sm" id="addTrip">+ New trip</button></div>
+    </div>
+    <div id="tripDetailView" hidden>
+      <button class="backbtn" id="tripBack">← All trips</button>
+      <div class="card">
+        <div class="tool-grid">
+          <div class="fld"><label for="tripName">Trip name</label><input id="tripName" placeholder="e.g. Goa 2026"></div>
+          <div class="fld"><label for="tripBudget">Budget (₹, optional)</label><input id="tripBudget" class="num" inputmode="numeric" placeholder="0"></div>
+          <div class="fld"><label for="tripStart">Start</label><input id="tripStart" type="date"></div>
+          <div class="fld"><label for="tripEnd">End</label><input id="tripEnd" type="date"></div>
+        </div>
+        <p class="alloc-note" id="tripBudgetNote"></p>
+      </div>
+      <div class="snapshot" style="margin-bottom:14px;">
+        <div class="stat"><p class="l">Total spend</p><p class="v num gold" id="tTotal">₹0</p></div>
+        <div class="stat"><p class="l">Today</p><p class="v num" id="tToday">₹0</p></div>
+        <div class="stat"><p class="l">Avg / day</p><p class="v num" id="tAvg">₹0</p><p class="s" id="tDays"></p></div>
+      </div>
+      <div class="card" id="tripPieCard" hidden>
+        <h3>Where the money went</h3>
+        <div class="donut-wrap"><svg id="tripPie" viewBox="0 0 42 42"></svg><div class="donut-legend" id="tripLegend"></div></div>
+      </div>
+      <div class="card" id="tripDaysCard" hidden>
+        <h3>Spend by day</h3>
+        <div id="tripByDay"></div>
+      </div>
+      <div class="eyebrow">Expenses</div>
+      <div id="tripExpList"></div>
+      <div class="btn-row"><button class="btn ghost sm" id="addTripExp">+ Add expense</button></div>
+    </div>
+  </section>
+
   <!-- MARKETS -->
   <section class="view" id="markets" role="tabpanel">
     <h2 class="sec serif">Markets</h2>
@@ -706,6 +768,7 @@ function migrate(o){
   if(o.goals.invest===undefined) o.goals.invest=0;
   if(o.bankCash===undefined) o.bankCash=0;
   o.receivables=o.receivables||[];
+  o.trips=o.trips||[];
   if(!o.incomes){
     const inc=Number(o.income)||0;
     o.incomes = inc>0 ? [{id:uid(),label:"Salary",amount:inc,kind:"fixed"}] : [];
@@ -716,7 +779,7 @@ function migrate(o){
 /* ---------- seed ---------- */
 function seed(){
   return {
-    income:0, bankCash:0, receivables:[], incomes:[], expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
+    income:0, bankCash:0, receivables:[], trips:[], incomes:[], expenses:[], debts:[], cards:[], investments:[], bills:[], paid:{},
     history:[], stocks:[], mfWatch:[], checklist:{},
     sip:{amt:0,years:5,rate:12},
     goals:{house:0,emergency:null,invest:0},
@@ -1613,6 +1676,165 @@ function renderInvList(){
     </div>`).join("");
 }
 
+/* ---------- trips ---------- */
+const TRIP_CATS=["Transport","Stay","Food","Shopping","Activities","Other"];
+let currentTrip=null;
+function tripTotal(t){ return t.expenses.reduce((a,e)=>a+numOr0(e.amount),0); }
+function tripDates(t){
+  const dates=t.expenses.filter(e=>e.date).map(e=>e.date);
+  return {uniq:[...new Set(dates)].sort()};
+}
+function renderTrips(){
+  const wrap=document.getElementById("tripList");
+  if(!state.trips.length){ wrap.innerHTML=`<div class="empty">No trips yet. Start one before your next getaway.</div>`; return; }
+  wrap.innerHTML=state.trips.map(t=>{
+    const tot=tripTotal(t);
+    const when=t.start?new Date(t.start).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})+(t.end?" – "+new Date(t.end).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):""):"";
+    const bud=numOr0(t.budget);
+    const budLine=bud>0?` · ${(tot/bud*100).toFixed(0)}% of ${inrShort(bud)} budget`:"";
+    return `<button class="trip-card" data-trip="${t.id}">
+      <p class="tname">${esc(t.name||"Untitled trip")}</p>
+      <p class="tmeta">${when||"No dates set"} · ${t.expenses.length} expense${t.expenses.length===1?"":"s"}${budLine}</p>
+      <span class="tspend num">${inr(tot)}</span>
+    </button>`;
+  }).join("");
+}
+function openTrip(id){
+  currentTrip=id;
+  const t=state.trips.find(x=>x.id===id); if(!t) return;
+  document.getElementById("tripListView").hidden=true;
+  document.getElementById("tripDetailView").hidden=false;
+  document.getElementById("tripName").value=t.name||"";
+  document.getElementById("tripBudget").value=t.budget||"";
+  document.getElementById("tripStart").value=t.start||"";
+  document.getElementById("tripEnd").value=t.end||"";
+  renderTripExpRows(); renderTripStats();
+}
+function closeTrip(){
+  currentTrip=null;
+  document.getElementById("tripDetailView").hidden=true;
+  document.getElementById("tripListView").hidden=false;
+  renderTrips();
+}
+function renderTripExpRows(){
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  const wrap=document.getElementById("tripExpList");
+  if(!t.expenses.length){ wrap.innerHTML=`<div class="empty">No expenses yet. Add the first one.</div>`; return; }
+  const sorted=[...t.expenses].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  wrap.innerHTML=sorted.map(e=>`
+    <div class="row texp" data-id="${e.id}">
+      <div class="fld fld-wide"><label>Spent on</label><input data-f="label" value="${esc(e.label)}" placeholder="e.g. Beach shack lunch"></div>
+      <div class="fld"><label>₹ amount</label><input data-f="amount" class="num" inputmode="numeric" value="${e.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>Category</label><select data-f="cat">
+        ${TRIP_CATS.map(c=>`<option value="${c}" ${e.cat===c?"selected":""}>${c}</option>`).join("")}
+      </select></div>
+      <div class="fld"><label>Date</label><input data-f="date" type="date" value="${esc(e.date||"")}"></div>
+      <button class="del" data-del title="Remove">×</button>
+    </div>`).join("");
+}
+function renderTripStats(){
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  const tot=tripTotal(t);
+  document.getElementById("tTotal").textContent=inr(tot);
+  const todayIso=new Date().toISOString().slice(0,10);
+  const today=t.expenses.filter(e=>e.date===todayIso).reduce((a,e)=>a+numOr0(e.amount),0);
+  document.getElementById("tToday").textContent=inr(today);
+  let days=0;
+  if(t.start&&t.end){ days=Math.round((new Date(t.end)-new Date(t.start))/86400000)+1; }
+  else days=tripDates(t).uniq.length;
+  days=Math.max(days,1);
+  document.getElementById("tAvg").textContent=inr(tot/days);
+  document.getElementById("tDays").textContent=`across ${days} day${days===1?"":"s"}`;
+  const bud=numOr0(t.budget);
+  const note=document.getElementById("tripBudgetNote");
+  if(bud>0){
+    const pct=tot/bud*100;
+    note.innerHTML=pct>100?`<b style="color:var(--warn)">Over budget by ${inr(tot-bud)}</b> (${pct.toFixed(0)}% used).`
+      :`Budget: <b>${inr(tot)}</b> of ${inr(bud)} used (${pct.toFixed(0)}%) · ${inr(bud-tot)} remaining.`;
+  } else note.textContent="";
+  // pie by category
+  const byCat={};
+  t.expenses.forEach(e=>{ const c=e.cat||"Other"; byCat[c]=(byCat[c]||0)+numOr0(e.amount); });
+  const entries=Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const pieCard=document.getElementById("tripPieCard");
+  if(entries.length&&tot>0){
+    pieCard.hidden=false;
+    const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const colors=[css("--accent"),css("--gold"),css("--plum"),css("--debt"),css("--ink-faint"),"#5B9BD5"];
+    const C=2*Math.PI*15.9155;
+    let cum=0, slices="";
+    entries.forEach(([c,v],i)=>{
+      const frac=v/tot;
+      slices+=`<circle cx="21" cy="21" r="15.9155" fill="none" stroke="${colors[i%colors.length]}" stroke-width="7"
+        stroke-dasharray="${(frac*C).toFixed(3)} ${C.toFixed(3)}" stroke-dashoffset="${(-cum*C).toFixed(3)}" transform="rotate(-90 21 21)"/>`;
+      cum+=frac;
+    });
+    document.getElementById("tripPie").innerHTML=slices;
+    document.getElementById("tripLegend").innerHTML=entries.map(([c,v],i)=>
+      `<div class="dleg"><i style="background:${colors[i%colors.length]}"></i>${esc(c)}<span class="amt num">${inr(v)}</span><span class="pc">${(v/tot*100).toFixed(0)}%</span></div>`).join("");
+  } else pieCard.hidden=true;
+  // by day
+  const byDay={};
+  t.expenses.forEach(e=>{ if(e.date) byDay[e.date]=(byDay[e.date]||0)+numOr0(e.amount); });
+  const dayEntries=Object.entries(byDay).sort((a,b)=>b[0].localeCompare(a[0]));
+  const daysCard=document.getElementById("tripDaysCard");
+  if(dayEntries.length){
+    daysCard.hidden=false;
+    const max=Math.max(...dayEntries.map(([,v])=>v));
+    document.getElementById("tripByDay").innerHTML=dayEntries.map(([d,v])=>{
+      const nice=new Date(d+"T12:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"});
+      return `<div class="bar-row"><span class="bar-label">${nice}</span>
+        <div class="bar-track"><div class="bar-fill gold" style="width:${(v/max*100).toFixed(1)}%"></div></div>
+        <span class="bar-amt num">${inr(v)}</span></div>`;
+    }).join("");
+  } else daysCard.hidden=true;
+}
+document.getElementById("addTrip").addEventListener("click",()=>{
+  const t={id:uid(),name:"",budget:0,start:"",end:"",expenses:[]};
+  state.trips.push(t); persist(); openTrip(t.id);
+  setTimeout(()=>document.getElementById("tripName").focus(),50);
+});
+document.getElementById("tripBack").addEventListener("click",closeTrip);
+document.getElementById("tripList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-trip]"); if(b) openTrip(b.dataset.trip);
+});
+["tripName","tripBudget","tripStart","tripEnd"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",e=>{
+    const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+    const map={tripName:"name",tripBudget:"budget",tripStart:"start",tripEnd:"end"};
+    const f=map[id];
+    t[f]=(f==="budget")?numOr0(e.target.value):e.target.value;
+    persist(); renderTripStats();
+  });
+});
+document.getElementById("addTripExp").addEventListener("click",()=>{
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  t.expenses.push({id:uid(),label:"",amount:0,cat:"Food",date:new Date().toISOString().slice(0,10)});
+  persist(); renderTripExpRows(); renderTripStats(); focusLast("tripExpList");
+});
+document.getElementById("tripExpList").addEventListener("input",e=>{
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  const row=e.target.closest("[data-id]"); if(!row) return;
+  const ex=t.expenses.find(x=>x.id===row.dataset.id); const f=e.target.dataset.f;
+  if(!ex||!f) return;
+  ex[f]=(f==="amount")?numOr0(e.target.value):e.target.value;
+  persist(); renderTripStats();
+});
+document.getElementById("tripExpList").addEventListener("change",e=>{
+  if(e.target.tagName!=="SELECT") return;
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  const row=e.target.closest("[data-id]"); if(!row) return;
+  const ex=t.expenses.find(x=>x.id===row.dataset.id);
+  if(ex&&e.target.dataset.f){ ex[e.target.dataset.f]=e.target.value; persist(); renderTripStats(); }
+});
+document.getElementById("tripExpList").addEventListener("click",e=>{
+  if(!e.target.closest("[data-del]")) return;
+  const t=state.trips.find(x=>x.id===currentTrip); if(!t) return;
+  const id=e.target.closest("[data-id]").dataset.id;
+  t.expenses=t.expenses.filter(x=>x.id!==id);
+  persist(); renderTripExpRows(); renderTripStats();
+});
+
 /* receivables: money owed to you */
 function oweMeta(r){
   if(r.returned) return `<span class="ok">Returned${r.returnedAt?" on "+new Date(r.returnedAt).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}):""}</span> · added to bank balance`;
@@ -1797,7 +2019,7 @@ function boot(){
   document.getElementById("sipAmt").value=state.sip.amt||"";
   document.getElementById("sipYears").value=state.sip.years||"";
   document.getElementById("sipRate").value=state.sip.rate||"";
-  renderIncomes(); renderOwed(); renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
+  renderIncomes(); renderOwed(); renderTrips(); renderExpenses(); renderDebts(); renderCards(); renderBills(); renderInvList();
   renderStocks(); renderMfWatch();
   renderOutputs();
   persist(); // store the auto-captured snapshot for this month
