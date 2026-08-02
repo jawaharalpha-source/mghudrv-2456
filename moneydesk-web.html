@@ -19,6 +19,7 @@
     --debt:#C2455C; --debt-soft:#FADDE3;
     --warn:#BE3A3A; --rule:#DFE5EE;
     --hero1:#0D7A61; --hero2:#0E4D40;
+    --heroNeg1:#9C4A33; --heroNeg2:#6B2E1F;
     --shadow:0 1px 3px rgba(16,26,46,.08); --shadow-lg:0 10px 32px rgba(16,26,46,.14);
   }
   :root[data-theme="dark"]{
@@ -30,6 +31,7 @@
     --debt:#F08A93; --debt-soft:#3E1B22;
     --warn:#F3A0A0; --rule:#22304A;
     --hero1:#0E5B49; --hero2:#0A3A30;
+    --heroNeg1:#7A3A28; --heroNeg2:#4C2318;
     --shadow:0 1px 3px rgba(0,0,0,.4); --shadow-lg:0 10px 32px rgba(0,0,0,.55);
   }
   *{box-sizing:border-box;}
@@ -112,6 +114,7 @@
     color:#fff; background:linear-gradient(135deg,var(--hero1),var(--hero2));
     box-shadow:var(--shadow-lg); margin-bottom:18px;
   }
+  .hero.neg{background:linear-gradient(135deg,var(--heroNeg1),var(--heroNeg2));}
   .hero::after{
     content:""; position:absolute; top:-70px; right:-70px; width:220px; height:220px;
     border-radius:50%; background:radial-gradient(circle, rgba(255,255,255,.16), transparent 65%);
@@ -919,9 +922,13 @@ function checkMonthRollover(){
       expenses:state.expenses.map(e=>({label:e.label,amount:numOr0(e.amount),kind:e.kind}))
     };
   }
+  // fresh month: fixed income & essential expenses carry their amounts;
+  // variable income & discretionary expenses reset to 0 for conscious re-entry
+  state.incomes.forEach(i=>{ if(i.kind!=="fixed") i.amount=0; });
+  state.expenses.forEach(e=>{ if(e.kind!=="essential") e.amount=0; });
   state.curMonth=mk;
   persist();
-  setTimeout(()=>toast("New month! Entries carried over — update anything that changed."),600);
+  setTimeout(()=>toast("New month! Fixed items carried over · variable amounts reset to 0"),600);
 }
 function captureSnapshot(){
   const mk=monthKey();
@@ -997,6 +1004,7 @@ function renderArchived(){
   const v=x=>x===undefined?"—":inr(x);
   document.getElementById("heroLabel").textContent="Net worth · "+M_SHORT[+mm-1]+" "+yy;
   document.getElementById("heroNW").textContent=v(snap?snap.value:undefined);
+  document.querySelector(".hero").classList.toggle("neg",!!(snap&&snap.value<0));
   document.getElementById("heroNote").textContent="as archived that month";
   heroDelta(viewing, snap?snap.value:0);
   document.getElementById("archStats").hidden=false;
@@ -1009,6 +1017,8 @@ function renderArchived(){
   det.hidden=false;
   document.getElementById("archDetailsBody").innerHTML=`
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Take-home that month</span><span class="bar-amt num">${v(snap&&snap.income)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Total spend + EMIs</span><span class="bar-amt num">${v(snap&&snap.outflow)}</span></div>
+    <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Surplus that month</span><span class="bar-amt num" style="color:${snap&&snap.surplus<0?"var(--warn)":"var(--accent)"}">${v(snap&&snap.surplus)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Cash in bank</span><span class="bar-amt num">${v(snap&&snap.bankCash)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Owed to you</span><span class="bar-amt num">${v(snap&&snap.owedToMe)}</span></div>
     <div class="bar-row" style="grid-template-columns:1fr 120px;"><span class="bar-label">Portfolio value</span><span class="bar-amt num">${v(snap&&snap.portfolio)}</span></div>
@@ -1055,7 +1065,8 @@ function chGroupedBars(el,hs,series){
     const [yy,mm]=h.month.split("-");
     return `<text x="${L+slot*i+slot/2}" y="${H-6}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${M_SHORT[+mm-1]} ${yy.slice(2)}</text>`;
   }).join("");
-  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}${labels}</svg>`;
+  const scaleNote=`<text x="${L+2}" y="12" font-size="9" fill="var(--ink-faint)">tallest ≈ ₹${inrShort(maxV)}</text>`;
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}${labels}${scaleNote}</svg>`;
 }
 function chLine(el,hs,get,color,opts){
   opts=opts||{};
@@ -1075,10 +1086,13 @@ function chLine(el,hs,get,color,opts){
     mark=`<line x1="${L}" y1="${y(opts.mark)}" x2="${W-R}" y2="${y(opts.mark)}" stroke="var(--ink-faint)" stroke-dasharray="4 4" stroke-width="1"/>
       <text x="${W-R}" y="${y(opts.mark)-4}" font-size="9" text-anchor="end" fill="var(--ink-faint)">${opts.markLabel||""}</text>`;
   }
+  const lastV=get(rows[rows.length-1]);
+  const fmt=opts.fmt||(v2=>"₹"+inrShort(v2));
+  const lastNote=`<text x="${x(rows.length-1)-4}" y="${Math.max(y(lastV)-7,10)}" font-size="10" font-weight="700" text-anchor="end" fill="${color}">${fmt(lastV)}</text>`;
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
     ${mark}
     <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-    ${dots}${chMonthLabels(rows,W,L,R,H)}
+    ${dots}${chMonthLabels(rows,W,L,R,H)}${lastNote}
   </svg>`;
 }
 function renderTrends(){
@@ -1089,7 +1103,7 @@ function renderTrends(){
     {color:css("--debt"),get:h=>h.outflow}
   ]);
   chLine(document.getElementById("chDebt"),hs,h=>h.debtOut,css("--debt"),{min:0});
-  chLine(document.getElementById("chSave"),hs,h=>(h.income>0&&h.surplus!==undefined)?+(h.surplus/h.income*100).toFixed(1):undefined,css("--accent"),{min:0,mark:20,markLabel:"20% guideline"});
+  chLine(document.getElementById("chSave"),hs,h=>(h.income>0&&h.surplus!==undefined)?+(h.surplus/h.income*100).toFixed(1):undefined,css("--accent"),{min:0,mark:20,markLabel:"20% guideline",fmt:v=>v.toFixed(0)+"%"});
   chGroupedBars(document.getElementById("chSplit"),hs,[
     {color:css("--gold"),get:h=>h.essExp},
     {color:css("--plum"),get:h=>h.discExp}
@@ -1141,6 +1155,7 @@ function renderLiveDash(){
   const nw=netWorth();
   document.getElementById("heroLabel").textContent="Net worth";
   document.getElementById("heroNW").textContent=inr(nw);
+  document.querySelector(".hero").classList.toggle("neg",nw<0);
   document.getElementById("heroNote").textContent="bank cash + investments + owed to you − loans − cards";
   heroDelta(monthKey(), nw);
   renderTargets();
@@ -1346,10 +1361,13 @@ function renderNWHistory(){
     return `<text x="${x(i)}" y="${H-7}" font-size="9" text-anchor="middle" fill="var(--ink-faint)">${name} ${yy.slice(2)}</text>`;
   }).join("");
   const dots=h.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.value)}" r="3.2" fill="var(--gold)"/>`).join("");
+  const lastP=h[h.length-1], firstP=h[0];
+  const valNotes=(h.length>1?`<text x="${x(0)+4}" y="${Math.max(y(firstP.value)-7,10)}" font-size="9" fill="var(--ink-faint)">₹${inrShort(firstP.value)}</text>`:"")
+    +`<text x="${x(h.length-1)-4}" y="${Math.max(y(lastP.value)-7,10)}" font-size="10" font-weight="700" text-anchor="end" fill="var(--gold)">₹${inrShort(lastP.value)}</text>`;
   chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Net worth over time">
     <path d="${area}" fill="var(--gold-soft)" opacity="0.7"/>
     <polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-    ${dots}${labels}
+    ${dots}${labels}${valNotes}
   </svg>`;
   // list (latest first)
   list.innerHTML=[...h].reverse().map(p=>{
