@@ -191,6 +191,17 @@
     border-radius:8px; padding:7px 8px; font-size:.85rem; font-family:inherit;
   }
   .fld input[inputmode]{font-family:ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  .adj{margin-top:7px; padding:7px 8px 8px; border-radius:10px; background:rgba(234,179,8,.10); border:1px solid rgba(234,179,8,.32);}
+  .adjlbl{display:block; font-size:.6rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-muted); margin-bottom:5px;}
+  .adjrow{display:flex; gap:6px;}
+  .fld .adj .adjin{flex:1; min-width:0; padding:7px 9px; font-size:.86rem; border:1.5px solid rgba(234,179,8,.45); background:var(--surface); color:var(--ink); font-family:ui-monospace,monospace;}
+  .fld .adj .adjin::placeholder{color:var(--ink-faint);}
+  .adjbtn{
+    appearance:none; flex-shrink:0; width:36px; border-radius:8px; cursor:pointer; border:none;
+    color:#fff; font-size:1.15rem; font-weight:800; line-height:1; padding:0;
+  }
+  .adjbtn[data-op="+"]{background:var(--accent);} .adjbtn[data-op="-"]{background:var(--debt);}
+  .adjbtn:active{transform:scale(.94);}
   .fld input:focus,.fld select:focus{outline:2px solid var(--accent); outline-offset:-1px; border-color:var(--accent);}
   .del{appearance:none; border:none; background:none; color:var(--ink-faint); font-size:1.15rem; cursor:pointer; line-height:1; padding:4px; align-self:end;}
   .del:hover{color:var(--warn);}
@@ -416,7 +427,7 @@
       <div class="card" style="padding:14px 16px;">
         <div class="fld">
           <label for="bankCash">Cash in bank accounts (all combined, ₹)</label>
-          <input id="bankCash" class="num" inputmode="numeric" placeholder="0">
+          <input id="bankCash" class="num" inputmode="numeric" placeholder="0"><div class="adj"><span class="adjlbl">Add / subtract amount</span><div class="adjrow"><input class="adjin" inputmode="decimal" placeholder="Amount" aria-label="Amount to add or subtract"><button class="adjbtn" data-op="+" title="Add to total">+</button><button class="adjbtn" data-op="-" title="Subtract from total">−</button></div></div>
         </div>
       </div>
       <div class="snapshot four">
@@ -1580,7 +1591,7 @@ function renderIncomes(){
   wrap.innerHTML=state.incomes.map(i=>`
     <div class="row exp" data-id="${i.id}">
       <div class="fld fld-wide"><label>Source</label><input data-f="label" value="${esc(i.label)}" placeholder="e.g. Salary"></div>
-      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${i.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${i.amount||""}" placeholder="0"><div class="adj"><span class="adjlbl">Add / subtract amount</span><div class="adjrow"><input class="adjin" inputmode="decimal" placeholder="Amount" aria-label="Amount to add or subtract"><button class="adjbtn" data-op="+" title="Add to total">+</button><button class="adjbtn" data-op="-" title="Subtract from total">−</button></div></div></div>
       <div class="fld"><label>Type</label><select data-f="kind">
         <option value="fixed" ${i.kind==="fixed"?"selected":""}>Fixed</option>
         <option value="variable" ${i.kind!=="fixed"?"selected":""}>Variable</option>
@@ -1610,7 +1621,7 @@ function renderExpenses(){
   wrap.innerHTML=state.expenses.map(e=>`
     <div class="row exp" data-id="${e.id}">
       <div class="fld fld-wide"><label>Item</label><input data-f="label" value="${esc(e.label)}" placeholder="e.g. Rent"></div>
-      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${e.amount||""}" placeholder="0"></div>
+      <div class="fld"><label>₹ / month</label><input data-f="amount" class="num" inputmode="numeric" value="${e.amount||""}" placeholder="0"><div class="adj"><span class="adjlbl">Add / subtract amount</span><div class="adjrow"><input class="adjin" inputmode="decimal" placeholder="Amount" aria-label="Amount to add or subtract"><button class="adjbtn" data-op="+" title="Add to total">+</button><button class="adjbtn" data-op="-" title="Subtract from total">−</button></div></div></div>
       <div class="fld"><label>Type</label><select data-f="kind">
         <option value="essential" ${e.kind==="essential"?"selected":""}>Essential</option>
         <option value="discretionary" ${e.kind!=="essential"?"selected":""}>Discretionary</option>
@@ -1710,7 +1721,7 @@ function renderInvList(){
         ${INV_TYPES.map(t=>`<option value="${t}" ${i.type===t?"selected":""}>${t}</option>`).join("")}
       </select></div>
       <div class="fld"><label>Invested</label><input data-f="invested" class="num" inputmode="numeric" value="${i.invested||""}" placeholder="0"></div>
-      <div class="fld"><label>Current</label><input data-f="current" class="num" inputmode="numeric" value="${i.current||""}" placeholder="0"></div>
+      <div class="fld"><label>Current</label><input data-f="current" class="num" inputmode="numeric" value="${i.current||""}" placeholder="0"><div class="adj"><span class="adjlbl">Add / subtract amount</span><div class="adjrow"><input class="adjin" inputmode="decimal" placeholder="Amount" aria-label="Amount to add or subtract"><button class="adjbtn" data-op="+" title="Add to total">+</button><button class="adjbtn" data-op="-" title="Subtract from total">−</button></div></div></div>
       <button class="del" data-del title="Remove">×</button>
     </div>`).join("");
 }
@@ -1872,6 +1883,34 @@ document.getElementById("tripExpList").addEventListener("click",e=>{
   const id=e.target.closest("[data-id]").dataset.id;
   t.expenses=t.expenses.filter(x=>x.id!==id);
   persist(); renderTripExpRows(); renderTripStats();
+});
+
+/* ± number cruncher: add/subtract into a running total */
+function applyAdj(btnOrInput, op){
+  const box=btnOrInput.closest(".adj"); if(!box) return;
+  const fld=box.closest(".fld");
+  const target=fld.querySelector("input[data-f], #bankCash");
+  const adjin=box.querySelector(".adjin");
+  const raw=String(adjin.value).trim();
+  if(raw.startsWith("-")||raw.startsWith("−")) op="-"; else if(raw.startsWith("+")) op="+";
+  const delta=parseFloat(raw.replace(/[^0-9.]/g,""));
+  if(!target||isNaN(delta)||delta===0){ adjin.focus(); return; }
+  const before=numOr0(target.value);
+  let after=Math.round((op==="+"?before+delta:before-delta)*100)/100;
+  if(after<0){ after=0; }
+  target.value=after||"";
+  target.dispatchEvent(new Event("input",{bubbles:true}));
+  adjin.value="";
+  const row=fld.closest("[data-id]");
+  const nameEl=row&&row.querySelector('input[data-f="label"],input[data-f="name"]');
+  const name=nameEl&&nameEl.value?nameEl.value+": ":(target.id==="bankCash"?"Bank: ":"");
+  toast(name+inr(before)+(op==="+"?" + ":" − ")+inr(delta)+" = "+inr(after));
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".adjbtn"); if(b){ e.preventDefault(); applyAdj(b,b.dataset.op); }
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&e.target.classList&&e.target.classList.contains("adjin")){ e.preventDefault(); applyAdj(e.target,"+"); }
 });
 
 /* receivables: money owed to you */
