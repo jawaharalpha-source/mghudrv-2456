@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0D7A61">
+<meta name="theme-color" content="#14173F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400..700&display=swap" rel="stylesheet">
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230D7A61'/%3E%3Ctext x='50' y='68' font-size='55' font-weight='bold' text-anchor='middle' fill='white' font-family='Georgia'%3E%E2%82%B9%3C/text%3E%3C/svg%3E">
 <title>MoneyDesk</title>
@@ -374,6 +377,140 @@
     box-shadow:var(--shadow-lg); opacity:0; pointer-events:none; transition:.25s; z-index:50;
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* ================= PASSBOOK DESIGN LAYER ================= */
+  :root{
+    --bg:#ECEEF6; --surface:#FFFFFF; --surface-muted:#E2E5F1;
+    --ink:#14183A; --ink-muted:#474D78; --ink-faint:#666C96; --rule:#D3D7E7;
+    --accent:#0B7D6D; --accent-soft:#D4EFE8;
+    --gold:#9C6200; --gold-soft:#FBEAC6;
+    --plum:#5B4BC4; --plum-soft:#E6E2FA;
+    --debt:#BE3753; --debt-soft:#F8DCE2; --warn:#B3303D;
+    --lav:#4A3FB5; --lav-soft:#E3E0FA; --on-lav:#FFFFFF;
+    --hero1:#0F4A42; --hero2:#0F4A42; --heroNeg1:#5A1F24; --heroNeg2:#5A1F24;
+    --shadow:none; --shadow-lg:0 18px 40px -18px rgba(20,24,58,.45);
+    --f-display:"Bricolage Grotesque", "Hanken Grotesk", system-ui, sans-serif;
+    --f-ui:"Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0E1030; --surface:#171A40; --surface-muted:#20244F;
+    --ink:#EEEFFA; --ink-muted:#AEB2D8; --ink-faint:#8288B6; --rule:#2A2F63;
+    --accent:#45D8B8; --accent-soft:#11383C;
+    --gold:#F5BD4C; --gold-soft:#372C14;
+    --plum:#B5A8F6; --plum-soft:#2A2666;
+    --debt:#FF8DA1; --debt-soft:#421B34; --warn:#FF9B8C;
+    --lav:#B5A8F6; --lav-soft:#2A2666; --on-lav:#13163D;
+    --hero1:#0E423B; --hero2:#0E423B; --heroNeg1:#4E1B20; --heroNeg2:#4E1B20;
+    --shadow-lg:0 18px 40px -18px rgba(0,0,0,.7);
+  }
+  body{font-family:var(--f-ui); font-feature-settings:"tnum" 1;}
+  .num{font-family:inherit; font-variant-numeric:tabular-nums;}
+  .serif{font-family:var(--f-display);}
+  :focus-visible{outline:2px solid var(--lav); outline-offset:2px;}
+
+  /* chrome */
+  .topbar{background:color-mix(in srgb, var(--bg) 82%, transparent); border-bottom-color:var(--rule);}
+  .brand .mark{font-family:var(--f-display); font-size:1.28rem; font-weight:500; letter-spacing:-.02em; color:var(--ink);}
+  .brand .mark b{color:inherit; font-weight:800;}
+  .brand .tag{text-transform:none; letter-spacing:0; font-size:.78rem; color:var(--ink-faint);}
+  .iconbtn{border-radius:11px; background:var(--surface); transition:border-color .15s, background .15s;}
+  .iconbtn:hover{border-color:var(--lav); color:var(--ink);}
+  .tabs{gap:4px; padding:8px 12px; background:var(--bg); border-bottom-color:var(--rule);}
+  .tab{border:none; margin:0; border-radius:999px; padding:8px 14px; font-size:.88rem; font-weight:600; color:var(--ink-muted); transition:background .15s, color .15s;}
+  .tab:hover{color:var(--ink);}
+  .tab[aria-selected="true"]{background:var(--lav-soft); color:var(--lav); border:none;}
+  .page{max-width:940px; padding-top:26px;}
+
+  /* type hierarchy */
+  h2.sec{font-family:var(--f-display); font-weight:800; font-size:1.9rem; line-height:1.08; letter-spacing:-.03em; margin:0 0 6px;}
+  .sub{font-size:.94rem; line-height:1.55; color:var(--ink-muted); max-width:58ch;}
+  .eyebrow{font-family:var(--f-display); text-transform:none; letter-spacing:-.01em; font-size:1.08rem; font-weight:700; color:var(--ink); margin:32px 0 12px;}
+  .stat .l,.result .cell .l{text-transform:none; letter-spacing:0; font-size:.8rem; font-weight:600; color:var(--ink-muted);}
+  .stat .v{font-family:var(--f-display); font-weight:700; font-size:1.5rem; letter-spacing:-.02em;}
+  .stat .s{font-size:.75rem; color:var(--ink-faint);}
+  .fld label,.row.owe .chk label{text-transform:none; letter-spacing:0; font-size:.74rem; font-weight:600; color:var(--ink-muted);}
+  .pill{text-transform:none; letter-spacing:0; font-size:.72rem; padding:2px 9px;}
+  .adjlbl{text-transform:none; letter-spacing:0; font-size:.74rem; font-weight:600;}
+  .card h3{font-family:var(--f-display); font-weight:700; font-size:1.04rem; letter-spacing:-.01em;}
+  .figure{font-family:var(--f-display); font-weight:800; letter-spacing:-.03em;}
+
+  /* surfaces: radius follows hierarchy, no grey drop shadows */
+  .card{border-radius:16px; box-shadow:none; border-color:var(--rule);}
+  .row{border-radius:13px; border-color:var(--rule); transition:border-color .15s, box-shadow .15s;}
+  .row:focus-within{border-color:var(--lav); box-shadow:0 0 0 3px var(--lav-soft);}
+  .snapshot{gap:10px; background:none; border:none; border-radius:0; overflow:visible;}
+  .snapshot .stat{border:1px solid var(--rule); border-radius:15px;}
+  .result{border-radius:14px;}
+
+  /* inputs */
+  .fld input,.fld select{border-radius:9px; padding:8px 10px; border-color:var(--rule); font-family:inherit; transition:border-color .15s, box-shadow .15s;}
+  .fld input[inputmode]{font-family:inherit; font-variant-numeric:tabular-nums;}
+  .fld input:focus,.fld select:focus{outline:none; border-color:var(--lav); box-shadow:0 0 0 3px var(--lav-soft);}
+  .fld .adj .adjin{font-family:inherit;}
+  .filterbar select{border-radius:999px; padding:8px 14px; font-family:inherit;}
+
+  /* buttons */
+  .btn{background:var(--lav); border-color:var(--lav); color:var(--on-lav); border-radius:11px; font-family:inherit; transition:filter .15s, transform .1s, background .15s;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:transparent; color:var(--lav); border-color:color-mix(in srgb, var(--lav) 45%, transparent);}
+  .btn.ghost:hover{background:var(--lav-soft); filter:none;}
+  .btn.gold{background:var(--gold); border-color:var(--gold); color:var(--on-lav);}
+  .adjbtn{transition:filter .15s, transform .1s;} .adjbtn:hover{filter:brightness(1.1);}
+
+  /* the passbook cover: net worth */
+  .hero{
+    border-radius:22px; padding:22px 22px 20px; color:#F7F5EE; box-shadow:var(--shadow-lg);
+    background:
+      repeating-radial-gradient(circle at 112% -18%, rgba(255,255,255,.07) 0 1px, transparent 1.6px 10px),
+      repeating-radial-gradient(circle at -14% 124%, rgba(245,189,76,.10) 0 1px, transparent 1.6px 12px),
+      var(--hero1);
+  }
+  .hero.neg{
+    background:
+      repeating-radial-gradient(circle at 112% -18%, rgba(255,255,255,.06) 0 1px, transparent 1.6px 10px),
+      repeating-radial-gradient(circle at -14% 124%, rgba(245,189,76,.08) 0 1px, transparent 1.6px 12px),
+      var(--heroNeg1);
+  }
+  .hero::after{display:none;}
+  .hero .l{text-transform:none; letter-spacing:0; font-size:.9rem; font-weight:600; opacity:.85; margin:0;}
+  .hero .v{font-family:var(--f-display); font-weight:800; font-stretch:80%; font-size:clamp(2.6rem,12vw,4rem); line-height:1; letter-spacing:-.02em; margin:10px 0 16px;}
+  .hero-note{font-size:.78rem; opacity:.72;}
+  .delta{background:rgba(255,255,255,.14); font-weight:700;}
+
+  /* bento dashboard */
+  .bento{display:grid; gap:10px; grid-template-columns:1fr 1fr;
+    grid-template-areas:"hero hero" "cash cash" "sur inc" "sur out" "dti dti" "arch arch"; margin-bottom:6px;}
+  .bento:has(#archStats:not([hidden])){grid-template-areas:"hero hero" "arch arch";}
+  .bento > .live-only, .bento .snapshot.four{display:contents;}
+  .bento .hero{grid-area:hero; margin:0; display:flex; flex-direction:column; justify-content:flex-end; min-height:172px;}
+  .bento .t-cash{grid-area:cash; margin:0; padding:15px 16px;}
+  .bento .stat{background:var(--surface); border:1px solid var(--rule); border-radius:16px; padding:15px 15px 14px;}
+  .bento .t-inc{grid-area:inc;} .bento .t-out{grid-area:out;} .bento .t-dti{grid-area:dti;}
+  .bento .t-sur{grid-area:sur; display:flex; flex-direction:column; justify-content:space-between;
+    background:var(--gold-soft); border-color:color-mix(in srgb, var(--gold) 30%, transparent);}
+  .bento .t-sur .v{font-size:clamp(1.7rem,7vw,2.3rem); font-weight:800; letter-spacing:-.03em;}
+  .bento .t-sur .l{color:var(--gold);}
+  .bento #archStats{grid-area:arch; margin:0;}
+  .minibar{position:relative; height:6px; border-radius:4px; background:var(--surface-muted); margin:10px 0 6px;}
+  .minibar i{display:block; height:100%; width:0; border-radius:4px; background:var(--accent); transition:width .5s ease;}
+  .minibar::after{content:""; position:absolute; left:80%; top:-4px; bottom:-4px; width:2px; border-radius:1px; background:var(--ink-faint);}
+  @media (min-width:760px){
+    .bento{grid-template-columns:repeat(4,1fr);
+      grid-template-areas:"hero hero hero sur" "hero hero hero sur" "cash inc out dti" "arch arch arch arch";}
+    .bento:has(#archStats:not([hidden])){grid-template-areas:"hero hero hero hero" "arch arch arch arch";}
+    .bento .hero{min-height:230px; padding:28px;}
+  }
+
+  /* lock screen in the new type */
+  .lockcard{border-radius:20px;}
+  .lockcard .glyph{font-family:var(--f-display); font-weight:800; background:linear-gradient(145deg,var(--hero1),var(--hero2));}
+  .lockcard h3{font-family:var(--f-display); font-weight:700;}
+  .lockcard input{font-family:inherit;}
+
+  .brand{min-width:0;} .brand .mark{white-space:nowrap;}
+  .iconbtn{font-family:system-ui,-apple-system,"Segoe UI Symbol","Apple Symbols",sans-serif; flex-shrink:0;}
+  @media (max-width:480px){ .brand .tag{display:none;} .brand .mark{font-size:1.12rem;} .topbar{gap:8px;} }
 </style>
 </head>
 <body>
@@ -384,7 +521,7 @@
     <span class="tag">personal</span>
   </div>
   <button class="iconbtn" id="lockBtn" title="App lock (PIN)" aria-label="App lock">🔒</button>
-  <button class="iconbtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+  <button class="iconbtn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
   <button class="iconbtn" id="exportBtn" title="Back up data to a file" aria-label="Export">↓</button>
   <button class="iconbtn" id="importBtn" title="Restore data from a file" aria-label="Import">↑</button>
   <input type="file" id="importFile" accept="application/json" hidden>
@@ -417,6 +554,7 @@
     </div>
     <div class="archbanner" id="archBanner" hidden></div>
 
+    <div class="bento">
     <div class="hero">
       <p class="l" id="heroLabel">Net worth</p>
       <p class="v num" id="heroNW">₹0</p>
@@ -424,23 +562,24 @@
     </div>
 
     <div class="live-only">
-      <div class="card" style="padding:14px 16px;">
+      <div class="card t-cash">
         <div class="fld">
           <label for="bankCash">Cash in bank accounts (all combined, ₹)</label>
           <input id="bankCash" class="num" inputmode="numeric" placeholder="0"><div class="adj"><span class="adjlbl">Add / subtract amount</span><div class="adjrow"><input class="adjin" inputmode="decimal" placeholder="Amount" aria-label="Amount to add or subtract"><button class="adjbtn" data-op="+" title="Add to total">+</button><button class="adjbtn" data-op="-" title="Subtract from total">−</button></div></div>
         </div>
       </div>
       <div class="snapshot four">
-        <div class="stat"><p class="l">Income</p><p class="v num" id="dIncome">₹0</p><p class="s" id="dIncomeSub">edit on Income tab</p></div>
-        <div class="stat"><p class="l">Outflow</p><p class="v num" id="dOutflow">₹0</p><p class="s">spend + EMIs</p></div>
-        <div class="stat"><p class="l">Surplus</p><p class="v num" id="dSurplus">₹0</p><p class="s">to save / invest</p></div>
-        <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="dDti">0%</p><p class="s">EMIs ÷ income</p></div>
+        <div class="stat t-inc"><p class="l">Income</p><p class="v num" id="dIncome">₹0</p><p class="s" id="dIncomeSub">edit on Income tab</p></div>
+        <div class="stat t-out"><p class="l">Outflow</p><p class="v num" id="dOutflow">₹0</p><p class="s">spend + EMIs</p></div>
+        <div class="stat t-sur"><p class="l">Surplus</p><p class="v num" id="dSurplus">₹0</p><p class="s">to save / invest</p></div>
+        <div class="stat t-dti"><p class="l">Debt quotient</p><p class="v num" id="dDti">0%</p><div class="minibar" aria-hidden="true"><i id="dDtiBar"></i></div><p class="s">EMIs ÷ income · tick marks the 40% lender ceiling</p></div>
       </div>
     </div>
     <div class="snapshot" id="archStats" hidden>
       <div class="stat"><p class="l">Outflow</p><p class="v num" id="aOutflow">—</p><p class="s">spend + EMIs</p></div>
       <div class="stat"><p class="l">Surplus</p><p class="v num" id="aSurplus">—</p><p class="s">that month</p></div>
       <div class="stat"><p class="l">Debt quotient</p><p class="v num" id="aDti">—</p><p class="s">that month</p></div>
+    </div>
     </div>
 
     <div class="card" id="archDetails" hidden><div id="archDetailsBody"></div></div>
@@ -1162,6 +1301,7 @@ function renderLiveDash(){
   const sEl=document.getElementById("dSurplus"); sEl.textContent=inr(sur);
   sEl.className="v num "+(sur>=0?"pos":"neg");
   document.getElementById("dDti").textContent=d.toFixed(1)+"%";
+  const dBar=document.getElementById("dDtiBar"); if(dBar){ dBar.style.width=Math.min(d/50*100,100)+"%"; dBar.style.background=d<36?"var(--accent)":(d<43?"var(--gold)":"var(--debt)"); }
 
   const nw=netWorth();
   document.getElementById("heroLabel").textContent="Net worth";
